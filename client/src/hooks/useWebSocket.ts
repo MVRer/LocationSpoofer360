@@ -39,16 +39,22 @@ export function useWebSocket() {
       const s = useStore.getState();
       api
         .getDevices()
-        .then((devices) => s.setDevices(devices))
-        .catch(() => {});
+        .then((devices) => {
+          console.log("[ws] Fetched devices:", devices);
+          s.setDevices(devices);
+        })
+        .catch((err) => console.error("[ws] Failed to fetch devices:", err));
       api
         .getTunnelStatus()
-        .then(({ running }) => s.setTunnelRunning(running))
-        .catch(() => {});
+        .then(({ running }) => {
+          console.log("[ws] Tunnel status:", running);
+          s.setTunnelRunning(running);
+        })
+        .catch((err) => console.error("[ws] Failed to fetch tunnel status:", err));
       api
         .getRecentLocations()
         .then((locs) => s.setRecentLocations(locs))
-        .catch(() => {});
+        .catch((err) => console.error("[ws] Failed to fetch recent locations:", err));
     }
 
     function handleMessage(msg: ServerMessage) {
