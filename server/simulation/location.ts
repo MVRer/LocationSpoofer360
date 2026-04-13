@@ -1,7 +1,8 @@
 import type { Coord } from "../../shared/types.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
 import { log } from "../log.js";
-import { broadcast } from "../ws/handler.js";
+import { broadcast } from "../sse/emitter.js";
+import { fireAndForget, run } from "../util/proc.js";
 
 let selectedUdid: string | null = null;
 let currentLocation: Coord | null = null;
@@ -27,9 +28,6 @@ export function setCurrentHeading(degrees: number) {
   currentHeading = ((degrees % 360) + 360) % 360;
 }
 
-/**
- * Update the internal location state and broadcast to all WebSocket clients.
- */
 export function updateLocation(coord: Coord) {
   currentLocation = coord;
   broadcast({
@@ -42,37 +40,25 @@ export function updateLocation(coord: Coord) {
 
 /**
  * Send the location to the iOS device via pymobiledevice3.
- * Fire-and-forget. Processes exit on their own — no tracking, no killing.
+ * Fire-and-forget.
  */
 function sendToDevice(coord: Coord) {
   if (!selectedUdid) return;
 
   findPMD3Path().then((pmd3) => {
     if (!pmd3) return;
-
-    try {
-      Bun.spawn(
-        [
-          pmd3,
-          "developer", "dvt", "simulate-location", "set",
-          "--tunnel", selectedUdid!,
-          "--", String(coord.lat), String(coord.lng),
-        ],
-        {
-          stdout: "ignore",
-          stderr: "ignore",
-          env: { ...process.env, PATH: getPythonEnvPath() },
-        },
-      );
-    } catch {
-      // ignore spawn errors
-    }
+    fireAndForget(
+      [
+        pmd3,
+        "developer", "dvt", "simulate-location", "set",
+        "--tunnel", selectedUdid!,
+        "--", String(coord.lat), String(coord.lng),
+      ],
+      { env: { ...process.env, PATH: getPythonEnvPath() } },
+    );
   });
 }
 
-/**
- * Set location: updates state, broadcasts to clients, and sends to device.
- */
 export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; message: string }> {
   updateLocation(coord);
   sendToDevice(coord);
@@ -85,11 +71,10 @@ export async function resetLocation(): Promise<{ ok: boolean; message: string }>
     const pmd3 = await findPMD3Path();
     if (pmd3) {
       try {
-        const proc = Bun.spawn(
+        await run(
           [pmd3, "developer", "dvt", "simulate-location", "clear", "--tunnel", selectedUdid],
-          { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: getPythonEnvPath() } },
+          { env: { ...process.env, PATH: getPythonEnvPath() } },
         );
-        await proc.exited;
       } catch { /* best effort */ }
     }
   }

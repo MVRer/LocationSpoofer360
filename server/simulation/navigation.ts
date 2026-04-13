@@ -1,5 +1,5 @@
 import type { Coord } from "../../shared/types.js";
-import { broadcast } from "../ws/handler.js";
+import { broadcast } from "../sse/emitter.js";
 import { setCurrentHeading } from "./location.js";
 import { bearing, destinationPoint, haversineDistance } from "./movement.js";
 import { NavigationRoute } from "./route.js";

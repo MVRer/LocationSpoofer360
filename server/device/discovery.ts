@@ -1,7 +1,8 @@
 import { DEVICE_POLL_INTERVAL_MS } from "../../shared/constants.js";
 import type { Device } from "../../shared/types.js";
 import { log } from "../log.js";
-import { broadcast } from "../ws/handler.js";
+import { broadcast } from "../sse/emitter.js";
+import { run } from "../util/proc.js";
 import { findPMD3Path, getPythonEnvPath } from "./pmd3.js";
 
 let knownDevices: Device[] = [];
@@ -18,18 +19,14 @@ export async function refreshDevices(): Promise<Device[]> {
   }
 
   try {
-    const proc = Bun.spawn([pmd3, "--no-color", "usbmux", "list"], {
+    const result = await run([pmd3, "--no-color", "usbmux", "list"], {
       stdout: "pipe",
       stderr: "pipe",
       env: { ...process.env, PATH: getPythonEnvPath() },
     });
 
-    const output = await new Response(proc.stdout).text();
-    await proc.exited;
-
-    if (proc.exitCode !== 0) {
-      const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
-      log.error(`usbmux list failed (exit ${proc.exitCode}): ${stderr.trim()}`);
+    if (result.exitCode !== 0) {
+      log.error(`usbmux list failed (exit ${result.exitCode}): ${result.stderr.trim()}`);
       return knownDevices;
     }
 
@@ -44,9 +41,8 @@ export async function refreshDevices(): Promise<Device[]> {
       ConnectionType?: string;
     }
 
-    const trimmed = output.trim();
+    const trimmed = result.stdout.trim();
     if (!trimmed || trimmed === "[]") {
-      // No devices connected -- not an error
       if (knownDevices.length > 0) {
         for (const device of knownDevices) {
           log.device(`Disconnected: ${device.name}`);

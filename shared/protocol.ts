@@ -16,4 +16,3 @@ export type ServerMessage =
   | { type: "distance:update"; totalMeters: number }
   | { type: "error"; message: string };
 
-export type ClientMessage = { type: "ping" };

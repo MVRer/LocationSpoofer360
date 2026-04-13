@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { run } from "../util/proc.js";
 
 const SEARCH_PATHS = [
   "/opt/homebrew/bin/pymobiledevice3",
@@ -38,12 +39,8 @@ export async function findPMD3Path(): Promise<string | null> {
 
   // Fallback: which
   try {
-    const proc = Bun.spawn(["which", "pymobiledevice3"], {
-      stdout: "pipe",
-      stderr: "ignore",
-    });
-    const output = await new Response(proc.stdout).text();
-    const trimmed = output.trim();
+    const result = await run(["which", "pymobiledevice3"], { stdout: "pipe" });
+    const trimmed = result.stdout.trim();
     if (trimmed && existsSync(trimmed)) {
       cachedPath = trimmed;
       return trimmed;

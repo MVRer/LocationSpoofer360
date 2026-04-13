@@ -6,9 +6,8 @@ import {
   SPEED_VARIANCE_MIN,
 } from "../../shared/constants.js";
 import type { Coord, MoveState, MoveType } from "../../shared/types.js";
-import { broadcast } from "../ws/handler.js";
+import { broadcast, getClientCount } from "../sse/emitter.js";
 import { getCurrentHeading, getCurrentLocation, setCurrentHeading, simulateLocation } from "./location.js";
-import { getClientCount } from "../ws/handler.js";
 import { advanceNavigation, getNavigation, stopNavigation } from "./navigation.js";
 import { log } from "../log.js";
 import { applyOrganic, computeSmoothSpeed, resetOrganicState } from "./organic.js";

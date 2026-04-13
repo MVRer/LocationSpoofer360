@@ -1,18 +1,15 @@
 import { TUNNEL_CHECK_INTERVAL_MS, TUNNEL_CHECK_TIMEOUT_MS } from "../../shared/constants.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
 import { log } from "../log.js";
-import { broadcast } from "../ws/handler.js";
+import { broadcast } from "../sse/emitter.js";
+import { fireAndForget, run, sleep } from "../util/proc.js";
 
 let tunneldStartedByUs = false;
 
 export async function isTunneldRunning(): Promise<boolean> {
   try {
-    const proc = Bun.spawn(["pgrep", "-f", "pymobiledevice3.*tunneld"], {
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-    await proc.exited;
-    return proc.exitCode === 0;
+    const result = await run(["pgrep", "-f", "pymobiledevice3.*tunneld"]);
+    return result.exitCode === 0;
   } catch {
     return false;
   }
@@ -44,22 +41,19 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string; ru
 
     if (platform === "darwin") {
       const script = `do shell script "PATH=${getPythonEnvPath()} ${pmd3} remote tunneld -d" with administrator privileges`;
-      log.tunnel(`Running osascript command`);
-      const osProc = Bun.spawn(["osascript", "-e", script], {
+      log.tunnel("Running osascript command");
+      const osResult = run(["osascript", "-e", script], {
         stdout: "pipe",
         stderr: "pipe",
       });
-      // Log osascript result in background (don't block the poll loop)
-      osProc.exited.then(async () => {
-        if (osProc.exitCode !== 0) {
-          const stderr = osProc.stderr ? await new Response(osProc.stderr).text() : "";
-          log.error(`osascript failed (exit ${osProc.exitCode}): ${stderr.trim()}`);
+      // Log result in background (don't block)
+      osResult.then((r) => {
+        if (r.exitCode !== 0) {
+          log.error(`osascript failed (exit ${r.exitCode}): ${r.stderr.trim()}`);
         }
       });
     } else {
-      Bun.spawn(["sudo", pmd3, "remote", "tunneld", "-d"], {
-        stdout: "ignore",
-        stderr: "ignore",
+      fireAndForget(["sudo", pmd3, "remote", "tunneld", "-d"], {
         env: { ...process.env, PATH: getPythonEnvPath() },
       });
     }
@@ -67,7 +61,7 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string; ru
     // Poll for tunneld to start
     const startTime = Date.now();
     while (Date.now() - startTime < TUNNEL_CHECK_TIMEOUT_MS) {
-      await Bun.sleep(TUNNEL_CHECK_INTERVAL_MS);
+      await sleep(TUNNEL_CHECK_INTERVAL_MS);
       if (await isTunneldRunning()) {
         tunneldStartedByUs = true;
         log.tunnel("Started successfully");
@@ -99,25 +93,21 @@ export async function stopTunneld(): Promise<{ ok: boolean; message: string; run
   try {
     if (process.platform === "darwin") {
       const script = `do shell script "kill -9 $(pgrep -f 'pymobiledevice3.*tunneld')" with administrator privileges`;
-      const proc = Bun.spawn(["osascript", "-e", script], {
+      const result = await run(["osascript", "-e", script], {
         stdout: "pipe",
         stderr: "pipe",
       });
-      await proc.exited;
-      if (proc.exitCode !== 0) {
-        const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
-        log.error(`osascript kill failed (exit ${proc.exitCode}): ${stderr.trim()}`);
+      if (result.exitCode !== 0) {
+        log.error(`osascript kill failed (exit ${result.exitCode}): ${result.stderr.trim()}`);
       }
     } else {
-      const proc = Bun.spawn(
+      await run(
         ["bash", "-c", "sudo kill -9 $(pgrep -f 'pymobiledevice3.*tunneld')"],
-        { stdout: "ignore", stderr: "ignore" },
       );
-      await proc.exited;
     }
 
     // Verify it's actually dead
-    await Bun.sleep(500);
+    await sleep(500);
     if (await isTunneldRunning()) {
       log.error("Tunnel still running after kill -9");
       return { ok: false, message: "Failed to stop tunnel", running: true };

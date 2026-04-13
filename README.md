@@ -36,21 +36,20 @@ pip3 install pymobiledevice3
 git clone https://github.com/MVRer/LocationSpoofer360.git
 cd LocationSpoofer360
 bun install
-cd client && bun install && cd ..
 
 bun run dev
 ```
 
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:5173` in your browser — single server, single port.
 
 ### Production
 
 ```bash
 bun run build
-bun start
+bun run start
 ```
 
-Both the API and built client are served from `http://localhost:3001`.
+Production server runs at `http://localhost:3001`.
 
 ## Usage
 
@@ -81,27 +80,44 @@ Both the API and built client are served from `http://localhost:3001`.
 ## Architecture
 
 ```
-Browser (:3000)              Bun Server (:3001)           pymobiledevice3
-+-----------------+   REST   +------------------+  spawn  +----------+
-| React + Leaflet |<-------->| HTTP + WebSocket  |<------->| tunneld  |
-| OSM tiles       |   + WS   | Movement engine   |         | DVT sim  |
-+-----------------+          +------------------+         +----------+
+Browser (:5173)                     Bun + React Router v7           pymobiledevice3
++---------------------+  loaders   +---------------------+  spawn  +----------+
+| React + Leaflet     |<---------->| SSR + API routes    |<------->| tunneld  |
+| Zustand, Tailwind   |  actions   | Movement engine     |         | DVT sim  |
+|                     |<---SSE-----| Device polling      |         |          |
++---------------------+            +---------------------+         +----------+
 ```
 
-- **Frontend**: React, Vite, Tailwind CSS, Leaflet (OpenStreetMap)
-- **Backend**: Bun HTTP server, WebSocket
-- **Routing**: [OSRM](http://project-osrm.org/) (open source, replaces Apple MapKit)
-- **Geocoding**: [Nominatim](https://nominatim.org/) (OpenStreetMap)
+Single server, single port. No proxy, no WebSocket.
+
+- **Framework**: [React Router v7](https://reactrouter.com/) (framework mode, SSR)
+- **Runtime**: [Bun](https://bun.sh)
+- **UI**: React 19, Tailwind CSS 4, [Leaflet](https://leafletjs.com/) (OpenStreetMap)
+- **State**: [Zustand](https://zustand.docs.pmnd.rs/)
+- **Real-time**: Server-Sent Events (SSE) for location/device/navigation updates
+- **Routing**: [Valhalla](https://github.com/valhalla/valhalla) (OpenStreetMap)
+- **Geocoding**: [Photon](https://photon.komoot.io/) (OpenStreetMap)
 - **Linting**: [Biome](https://biomejs.dev/)
+
+### Project Structure
+
+```
+app/          React Router app (routes, components, hooks, store)
+app/routes/   File-based routes + API resource routes
+server/       Backend (simulation, device management, tunnel, SSE)
+shared/       Types and constants shared between client and server
+```
 
 ## Development
 
 ```bash
-bun run dev          # Start dev server (client + server)
+bun run dev          # Start dev server (single port, HMR + SSR)
+bun run build        # Production build
+bun run start        # Start production server
+bun run typecheck    # Type check
 bun run lint         # Lint with Biome
 bun run lint:fix     # Auto-fix lint issues
 bun run format       # Format with Biome
-bun run build        # Production build
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for code standards, commit conventions, and contribution guidelines.
