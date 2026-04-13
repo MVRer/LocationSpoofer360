@@ -1,5 +1,6 @@
 import { DEVICE_POLL_INTERVAL_MS } from "../../shared/constants.js";
 import type { Device } from "../../shared/types.js";
+import { log } from "../log.js";
 import { broadcast } from "../ws/handler.js";
 import { findPMD3Path, getPythonEnvPath } from "./pmd3.js";
 
@@ -71,7 +72,7 @@ export async function refreshDevices(): Promise<Device[]> {
     knownDevices = devices;
     return devices;
   } catch (err) {
-    console.error("[discovery] Failed to list devices:", err);
+    log.error(`Failed to list devices: ${err}`);
     return knownDevices;
   }
 }
@@ -82,7 +83,7 @@ export function startDevicePolling() {
   if (pollTimer) return;
   refreshDevices();
   pollTimer = setInterval(refreshDevices, DEVICE_POLL_INTERVAL_MS);
-  console.log("[discovery] Device polling started");
+  log.device("Polling started");
 }
 
 export function stopDevicePolling() {

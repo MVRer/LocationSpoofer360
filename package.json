@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"bun run dev:server\" \"bun run dev:client\"",
+    "dev": "concurrently -n server,client -c blue,magenta \"bun run dev:server\" \"bun run dev:client\"",
     "dev:server": "bun --watch server/index.ts",
     "dev:client": "cd client && bunx --bun vite --port 3000",
     "build": "cd client && bunx --bun vite build",

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { json, matchRoute } from "./api/router.js";
 import { config } from "./config.js";
+import { log } from "./log.js";
 import { addClient, removeClient } from "./ws/handler.js";
 
 // Register API routes
@@ -24,12 +25,12 @@ startDevicePolling();
 
 // Cleanup on exit
 async function shutdown() {
-  console.log("\n[server] Shutting down...");
+  log.server("Shutting down...");
   stopDevicePolling();
   stopMovement();
   cleanupSimulation();
   if (wasTunneldStartedByUs()) {
-    console.log("[server] Stopping tunneld we started...");
+    log.tunnel("Stopping tunneld we started...");
     await stopTunneld();
   }
   process.exit(0);
@@ -39,9 +40,6 @@ process.on("SIGTERM", shutdown);
 
 // Production static file serving
 const DIST_DIR = path.resolve(import.meta.dir, "../client/dist");
-const _isDev =
-  process.env.NODE_ENV !== "production" &&
-  existsSync(path.resolve(import.meta.dir, "../client/node_modules/.vite"));
 
 const _server = Bun.serve({
   port: config.serverPort,
@@ -54,7 +52,7 @@ const _server = Bun.serve({
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    // CORS headers for dev
+    // CORS headers
     const corsHeaders: Record<string, string> = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -79,7 +77,6 @@ const _server = Bun.serve({
     if (existsSync(DIST_DIR)) {
       let filePath = path.join(DIST_DIR, url.pathname);
 
-      // If path is a directory or doesn't exist, serve index.html (SPA fallback)
       if (!existsSync(filePath) || url.pathname === "/") {
         filePath = path.join(DIST_DIR, "index.html");
       }
@@ -94,11 +91,11 @@ const _server = Bun.serve({
   websocket: {
     open(ws) {
       addClient(ws);
-      console.log("[ws] Client connected");
+      log.ws("Client connected");
     },
     close(ws) {
       removeClient(ws);
-      console.log("[ws] Client disconnected");
+      log.ws("Client disconnected");
     },
     message(ws, message) {
       try {
@@ -113,4 +110,4 @@ const _server = Bun.serve({
   },
 });
 
-console.log(`[server] LocationSpoofer360 running on http://localhost:${config.serverPort}`);
+log.server(`Running on http://localhost:${config.serverPort}`);
