@@ -50,7 +50,7 @@ export function Sidebar() {
         setSearchResults([]);
       }
       setSearching(false);
-    }, 500);
+    }, 200);
   }, []);
 
   const handleSelectSearchResult = async (result: SearchResult) => {

@@ -11,7 +11,7 @@ export const DEFAULT_SPEEDS: Record<string, number> = {
   drive: 50,
 };
 
-export const AUTO_MOVE_INTERVAL_MS = 1000;
+export const AUTO_MOVE_INTERVAL_MS = 500;
 export const DEVICE_POLL_INTERVAL_MS = 3000;
 export const TUNNEL_CHECK_TIMEOUT_MS = 30000;
 export const TUNNEL_CHECK_INTERVAL_MS = 2000;

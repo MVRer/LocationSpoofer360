@@ -4,6 +4,7 @@ import path from "node:path";
 const SEARCH_PATHS = [
   "/opt/homebrew/bin/pymobiledevice3",
   "/usr/local/bin/pymobiledevice3",
+  "/Library/Frameworks/Python.framework/Versions/3.14/bin/pymobiledevice3",
   "/Library/Frameworks/Python.framework/Versions/3.13/bin/pymobiledevice3",
   "/Library/Frameworks/Python.framework/Versions/3.12/bin/pymobiledevice3",
   "/Library/Frameworks/Python.framework/Versions/3.11/bin/pymobiledevice3",
@@ -12,6 +13,7 @@ const SEARCH_PATHS = [
 function getUserPaths(): string[] {
   const home = process.env.HOME ?? "";
   return [
+    path.join(home, "Library/Python/3.15/bin/pymobiledevice3"),
     path.join(home, "Library/Python/3.14/bin/pymobiledevice3"),
     path.join(home, "Library/Python/3.13/bin/pymobiledevice3"),
     path.join(home, "Library/Python/3.12/bin/pymobiledevice3"),
@@ -55,11 +57,14 @@ export async function findPMD3Path(): Promise<string | null> {
 
 export function getPythonEnvPath(): string {
   const existing = process.env.PATH ?? "";
+  const home = process.env.HOME ?? "";
   const extras = [
     "/opt/homebrew/bin",
     "/usr/local/bin",
     "/Library/Frameworks/Python.framework/Versions/Current/bin",
-    `${process.env.HOME}/.local/bin`,
+    `${home}/.local/bin`,
+    `${home}/Library/Python/3.14/bin`,
+    `${home}/Library/Python/3.13/bin`,
   ];
   return [...extras, existing].join(":");
 }

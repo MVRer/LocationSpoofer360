@@ -41,8 +41,8 @@ export const api = {
   setVariance: (enabled: boolean) =>
     request<OkResponse>("POST", "/api/movement/variance", { enabled }),
 
-  startNavigation: (waypoints: { lat: number; lng: number }[]) =>
-    request<OkResponse>("POST", "/api/navigation/start", { waypoints }),
+  startNavigation: (waypoints: { lat: number; lng: number }[], destinationName?: string) =>
+    request<OkResponse>("POST", "/api/navigation/start", { waypoints, destinationName }),
   stopNavigation: () => request<OkResponse>("POST", "/api/navigation/stop"),
   setAutoReverse: (enabled: boolean) =>
     request<OkResponse>("POST", "/api/navigation/reverse", { enabled }),

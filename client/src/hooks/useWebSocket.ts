@@ -7,29 +7,49 @@ export function useWebSocket() {
 
   useEffect(() => {
     function connect() {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      // In dev mode (Vite on :3000), connect directly to backend on :3001
+      // In production, same host serves everything
+      const isDev = window.location.port === "3000";
+      const wsUrl = isDev
+        ? "ws://localhost:3001/ws"
+        : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        // Ask the server to push current state now that the connection is established
+        console.log("[ws] CONNECTED to", wsUrl);
         ws.send(JSON.stringify({ type: "init" }));
       };
 
+      let locCount = 0;
       ws.onmessage = (event) => {
         try {
           const msg: ServerMessage = JSON.parse(event.data);
+          if (msg.type === "location:changed") {
+            locCount++;
+            if (locCount % 10 === 0) {
+              console.log(`[ws] loc #${locCount} | ${msg.lat.toFixed(6)}, ${msg.lng.toFixed(6)} | heading: ${msg.heading.toFixed(0)}`);
+            }
+          } else if (msg.type === "navigation:progress") {
+            console.log(`[ws] nav progress ${(msg.progress * 100).toFixed(1)}% | upcoming: ${msg.upcoming.length} pts | traveled: ${msg.traveled.length} pts`);
+          } else if (msg.type === "moveState:changed") {
+            console.log(`[ws] moveState: ${msg.state}`);
+          } else if (msg.type === "navigation:finished") {
+            console.log(`[ws] nav finished | reversed: ${msg.autoReversed}`);
+          }
           handleMessage(msg);
-        } catch {
-          // ignore
+        } catch (err) {
+          console.error("[ws] parse error:", err);
         }
       };
 
       ws.onclose = () => {
+        console.log("[ws] DISCONNECTED, reconnecting in 2s...");
         setTimeout(connect, 2000);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (err) => {
+        console.error("[ws] ERROR:", err);
         ws.close();
       };
     }
@@ -81,6 +101,8 @@ export function useWebSocket() {
             s.setTraveledRoute([]);
             s.setUpcomingRoute([]);
             s.setNavigationProgress(0);
+            s.setNavigationDestinationName(null);
+            s.setNavigationStartTime(null);
             s.addToast("Navigation finished", "success");
           } else {
             s.addToast("Route reversed, continuing", "info");

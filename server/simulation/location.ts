@@ -1,9 +1,8 @@
-import type { Subprocess } from "bun";
 import type { Coord } from "../../shared/types.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
+import { log } from "../log.js";
 import { broadcast } from "../ws/handler.js";
 
-let activeProcess: Subprocess | null = null;
 let selectedUdid: string | null = null;
 let currentLocation: Coord | null = null;
 let currentHeading = 0;
@@ -28,89 +27,60 @@ export function setCurrentHeading(degrees: number) {
   currentHeading = ((degrees % 360) + 360) % 360;
 }
 
-function killActiveProcess() {
-  if (!activeProcess) return;
-  try {
-    if (activeProcess.exitCode === null) {
-      activeProcess.kill();
-      // Fallback to SIGINT after 1 second
-      const proc = activeProcess;
-      setTimeout(() => {
-        if (proc.exitCode === null) {
-          proc.kill(2); // SIGINT
-        }
-      }, 1000);
-    }
-  } catch {
-    // process may already be dead
-  }
-  activeProcess = null;
+/**
+ * Update the internal location state and broadcast to all WebSocket clients.
+ */
+export function updateLocation(coord: Coord) {
+  currentLocation = coord;
+  broadcast({
+    type: "location:changed",
+    lat: coord.lat,
+    lng: coord.lng,
+    heading: currentHeading,
+  });
 }
 
-export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; message: string }> {
-  if (!selectedUdid) {
-    return { ok: false, message: "No device selected" };
-  }
+/**
+ * Send the location to the iOS device via pymobiledevice3.
+ * Fire-and-forget. Processes exit on their own — no tracking, no killing.
+ */
+function sendToDevice(coord: Coord) {
+  if (!selectedUdid) return;
 
-  const pmd3 = await findPMD3Path();
-  if (!pmd3) {
-    return { ok: false, message: "pymobiledevice3 not found" };
-  }
+  findPMD3Path().then((pmd3) => {
+    if (!pmd3) return;
 
-  // Kill existing simulation
-  killActiveProcess();
-
-  try {
-    const args = [
-      pmd3,
-      "developer",
-      "dvt",
-      "simulate-location",
-      "set",
-      "--tunnel",
-      selectedUdid,
-      "--",
-      String(coord.lat),
-      String(coord.lng),
-    ];
-
-    activeProcess = Bun.spawn(args, {
-      stdout: "pipe",
-      stderr: "pipe",
-      env: { ...process.env, PATH: getPythonEnvPath() },
-    });
-
-    // Wait 2 seconds for process to establish connection
-    await Bun.sleep(2000);
-
-    if (activeProcess.exitCode !== null) {
-      // Process exited early - read stderr for error
-      let stderrText = "";
-      if (activeProcess.stderr && typeof activeProcess.stderr !== "number") {
-        stderrText = await new Response(activeProcess.stderr).text();
-      }
-      activeProcess = null;
-      return { ok: false, message: `Simulation failed: ${stderrText.trim() || "process exited"}` };
+    try {
+      Bun.spawn(
+        [
+          pmd3,
+          "developer", "dvt", "simulate-location", "set",
+          "--tunnel", selectedUdid!,
+          "--", String(coord.lat), String(coord.lng),
+        ],
+        {
+          stdout: "ignore",
+          stderr: "ignore",
+          env: { ...process.env, PATH: getPythonEnvPath() },
+        },
+      );
+    } catch {
+      // ignore spawn errors
     }
+  });
+}
 
-    currentLocation = coord;
-    broadcast({
-      type: "location:changed",
-      lat: coord.lat,
-      lng: coord.lng,
-      heading: currentHeading,
-    });
-
-    return { ok: true, message: "Location set" };
-  } catch (err) {
-    return { ok: false, message: `Failed to simulate location: ${err}` };
-  }
+/**
+ * Set location: updates state, broadcasts to clients, and sends to device.
+ */
+export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; message: string }> {
+  updateLocation(coord);
+  sendToDevice(coord);
+  return { ok: true, message: "Location set" };
 }
 
 export async function resetLocation(): Promise<{ ok: boolean; message: string }> {
-  killActiveProcess();
-
-  // Also send explicit clear command for reliability
+  log.sim("Reset location");
   if (selectedUdid) {
     const pmd3 = await findPMD3Path();
     if (pmd3) {
@@ -120,9 +90,7 @@ export async function resetLocation(): Promise<{ ok: boolean; message: string }>
           { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: getPythonEnvPath() } },
         );
         await proc.exited;
-      } catch {
-        // best effort
-      }
+      } catch { /* best effort */ }
     }
   }
 
@@ -132,9 +100,7 @@ export async function resetLocation(): Promise<{ ok: boolean; message: string }>
 }
 
 export function isSimulating(): boolean {
-  return activeProcess !== null && activeProcess.exitCode === null;
+  return currentLocation !== null;
 }
 
-export function cleanup() {
-  killActiveProcess();
-}
+export function cleanup() {}

@@ -40,11 +40,21 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string; ru
   const platform = process.platform;
 
   try {
+    log.tunnel(`Found pymobiledevice3 at: ${pmd3}`);
+
     if (platform === "darwin") {
       const script = `do shell script "PATH=${getPythonEnvPath()} ${pmd3} remote tunneld -d" with administrator privileges`;
-      Bun.spawn(["osascript", "-e", script], {
-        stdout: "ignore",
-        stderr: "ignore",
+      log.tunnel(`Running osascript command`);
+      const osProc = Bun.spawn(["osascript", "-e", script], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      // Log osascript result in background (don't block the poll loop)
+      osProc.exited.then(async () => {
+        if (osProc.exitCode !== 0) {
+          const stderr = osProc.stderr ? await new Response(osProc.stderr).text() : "";
+          log.error(`osascript failed (exit ${osProc.exitCode}): ${stderr.trim()}`);
+        }
       });
     } else {
       Bun.spawn(["sudo", pmd3, "remote", "tunneld", "-d"], {

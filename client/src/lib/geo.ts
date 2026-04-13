@@ -16,6 +16,14 @@ function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
+export function polylineDistance(coords: { lat: number; lng: number }[]): number {
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    total += haversine(coords[i - 1], coords[i]);
+  }
+  return total;
+}
+
 export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(2)} km`;

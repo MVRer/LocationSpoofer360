@@ -7,13 +7,18 @@ import {
 } from "../../shared/constants.js";
 import type { Coord, MoveState, MoveType } from "../../shared/types.js";
 import { broadcast } from "../ws/handler.js";
-import { getCurrentHeading, getCurrentLocation, simulateLocation } from "./location.js";
+import { getCurrentHeading, getCurrentLocation, setCurrentHeading, simulateLocation } from "./location.js";
+import { getClientCount } from "../ws/handler.js";
 import { advanceNavigation, getNavigation, stopNavigation } from "./navigation.js";
+import { log } from "../log.js";
+import { applyOrganic, computeSmoothSpeed, resetOrganicState } from "./organic.js";
 
 let moveType: MoveType = "walk";
 let moveState: MoveState = "idle";
+let stepCounter = 0;
 let speedKmh = DEFAULT_SPEEDS.walk;
 let speedVarianceEnabled = false;
+let organicEnabled = true;
 let totalDistanceMeters = 0;
 let autoMoveTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -45,6 +50,11 @@ export function setSpeedKmh(kmh: number) {
 
 export function setSpeedVariance(enabled: boolean) {
   speedVarianceEnabled = enabled;
+}
+
+export function setOrganicMovement(enabled: boolean) {
+  organicEnabled = enabled;
+  if (!enabled) resetOrganicState();
 }
 
 export function getTotalDistance(): number {
@@ -106,41 +116,88 @@ function toDeg(rad: number): number {
 
 // --- Movement ---
 
+const deltaSeconds = AUTO_MOVE_INTERVAL_MS / 1000;
+
 function getEffectiveSpeed(): number {
-  let speed = kmhToMs(speedKmh);
+  let targetSpeed = kmhToMs(speedKmh);
   if (speedVarianceEnabled) {
     const factor = SPEED_VARIANCE_MIN + Math.random() * (SPEED_VARIANCE_MAX - SPEED_VARIANCE_MIN);
-    speed *= factor;
+    targetSpeed *= factor;
   }
-  return speed;
+  if (organicEnabled) {
+    return computeSmoothSpeed(targetSpeed, deltaSeconds, moveType);
+  }
+  return targetSpeed;
 }
 
 export async function step(): Promise<Coord | null> {
   const current = getCurrentLocation();
   if (!current) return null;
 
+  stepCounter++;
   const nav = getNavigation();
 
   if (nav && moveState === "navigation") {
-    // Navigation mode: advance along route
-    const result = advanceNavigation(getEffectiveSpeed(), AUTO_MOVE_INTERVAL_MS / 1000);
+    const speed = getEffectiveSpeed();
+    const result = advanceNavigation(speed, deltaSeconds);
     if (!result) {
-      // Navigation finished
+      // Navigation finished — stop everything
+      log.sim(`Navigation complete at step #${stepCounter}`);
+      if (autoMoveTimer) {
+        clearInterval(autoMoveTimer);
+        autoMoveTimer = null;
+      }
+      moveState = "idle";
+      broadcast({ type: "moveState:changed", state: "idle" });
       return current;
     }
-    const distance = haversineDistance(current, result);
+
+    let finalCoord = result;
+    if (organicEnabled) {
+      const headingNow = getCurrentHeading();
+      const organic = applyOrganic(result, headingNow, deltaSeconds);
+      finalCoord = organic.coord;
+      setCurrentHeading(organic.bearing);
+    }
+
+    const distance = haversineDistance(current, finalCoord);
     totalDistanceMeters += distance;
     broadcast({ type: "distance:update", totalMeters: totalDistanceMeters });
-    await simulateLocation(result);
-    return result;
+
+    if (stepCounter % 10 === 0) {
+      log.sim(`step #${stepCounter} | nav ${(nav.progress * 100).toFixed(1)}% | ${finalCoord.lat.toFixed(6)}, ${finalCoord.lng.toFixed(6)} | ${(speed * 3.6).toFixed(1)} km/h | ${distance.toFixed(1)}m | ws:${getClientCount()}`);
+    }
+
+    await simulateLocation(finalCoord);
+    return finalCoord;
   }
 
   // Manual/auto: move in current heading direction
   const speed = getEffectiveSpeed();
-  const distance = speed * (AUTO_MOVE_INTERVAL_MS / 1000);
-  const next = destinationPoint(current, getCurrentHeading(), distance);
-  totalDistanceMeters += distance;
+  const distance = speed * deltaSeconds;
+  let headingDeg = getCurrentHeading();
+
+  let next: Coord;
+  if (organicEnabled) {
+    const { coord: organicDest, bearing: wobbledHeading } = applyOrganic(
+      destinationPoint(current, headingDeg, distance),
+      headingDeg,
+      deltaSeconds,
+    );
+    setCurrentHeading(wobbledHeading);
+    next = organicDest;
+  } else {
+    next = destinationPoint(current, headingDeg, distance);
+  }
+
+  const actualDist = haversineDistance(current, next);
+  totalDistanceMeters += actualDist;
   broadcast({ type: "distance:update", totalMeters: totalDistanceMeters });
+
+  if (stepCounter % 10 === 0) {
+    log.sim(`step #${stepCounter} | ${moveState} | ${next.lat.toFixed(6)}, ${next.lng.toFixed(6)} | ${(speed * 3.6).toFixed(1)} km/h | heading ${headingDeg.toFixed(0)}°`);
+  }
+
   await simulateLocation(next);
   return next;
 }
@@ -167,6 +224,7 @@ export function startNavigationMode() {
   if (autoMoveTimer) {
     clearInterval(autoMoveTimer);
   }
+  resetOrganicState();
   moveState = "navigation";
   broadcast({ type: "moveState:changed", state: "navigation" });
   autoMoveTimer = setInterval(() => step(), AUTO_MOVE_INTERVAL_MS);
@@ -175,6 +233,7 @@ export function startNavigationMode() {
 export function stopMovement() {
   stopAutoMove();
   stopNavigation();
+  resetOrganicState();
   moveState = "idle";
   broadcast({ type: "moveState:changed", state: "idle" });
 }

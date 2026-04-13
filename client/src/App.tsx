@@ -11,6 +11,7 @@ import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { StatusBar } from "./components/layout/StatusBar";
 import { MapView } from "./components/map/MapView";
+import { NavigationPanel } from "./components/navigation/NavigationPanel";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { api } from "./services/api";
@@ -39,7 +40,10 @@ export function App() {
         {sidebarOpen && <Sidebar />}
         <main className="flex-1 relative flex">
           {selectedUdid ? (
-            <MapView />
+            <>
+              <MapView />
+              <NavigationPanel />
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center flex-1 text-slate-500 gap-3">
               <DevicePhoneMobileIcon className="w-12 h-12 opacity-40" />

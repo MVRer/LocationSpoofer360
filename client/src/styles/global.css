@@ -7,6 +7,14 @@
   height: 100%;
 }
 
+/* ---- Smooth marker movement ---- */
+.leaflet-marker-icon.location-marker {
+  transition: transform 450ms ease-out;
+}
+.leaflet-marker-icon.location-marker.dragging {
+  transition: none !important;
+}
+
 /* ---- Custom location marker ---- */
 .location-marker {
   background: none !important;
@@ -17,6 +25,7 @@
   width: 24px;
   height: 24px;
   position: relative;
+  transition: transform 200ms ease-out;
 }
 
 .marker-inner {

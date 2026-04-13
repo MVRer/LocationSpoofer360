@@ -20,6 +20,9 @@ interface AppState {
   upcomingRoute: Coord[];
   navigationProgress: number;
   autoReverse: boolean;
+  previewRoute: Coord[] | null;
+  navigationDestinationName: string | null;
+  navigationStartTime: number | null;
 
   // UI
   sidebarOpen: boolean;
@@ -50,6 +53,9 @@ interface AppState {
   setUpcomingRoute: (coords: Coord[]) => void;
   setNavigationProgress: (progress: number) => void;
   setAutoReverse: (enabled: boolean) => void;
+  setPreviewRoute: (coords: Coord[] | null) => void;
+  setNavigationDestinationName: (name: string | null) => void;
+  setNavigationStartTime: (time: number | null) => void;
   toggleSidebar: () => void;
   setSearchQuery: (query: string) => void;
   setRecentLocations: (locs: RecentLocation[]) => void;
@@ -83,6 +89,9 @@ export const useStore = create<AppState>((set) => ({
   upcomingRoute: [],
   navigationProgress: 0,
   autoReverse: false,
+  previewRoute: null,
+  navigationDestinationName: null,
+  navigationStartTime: null,
   sidebarOpen: true,
   searchQuery: "",
   recentLocations: [],
@@ -116,6 +125,9 @@ export const useStore = create<AppState>((set) => ({
   setUpcomingRoute: (coords) => set({ upcomingRoute: coords }),
   setNavigationProgress: (progress) => set({ navigationProgress: progress }),
   setAutoReverse: (enabled) => set({ autoReverse: enabled }),
+  setPreviewRoute: (coords) => set({ previewRoute: coords }),
+  setNavigationDestinationName: (name) => set({ navigationDestinationName: name }),
+  setNavigationStartTime: (time) => set({ navigationStartTime: time }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSearchQuery: (query) => set({ searchQuery: query }),
   autoFocus: true,
