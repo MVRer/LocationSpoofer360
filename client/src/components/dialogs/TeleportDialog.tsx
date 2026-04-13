@@ -28,6 +28,7 @@ export function TeleportDialog() {
     closeDialog();
     const result = await api.setLocation(lat, lng);
     if (result.ok) {
+      useStore.getState().setCurrentLocation({ lat, lng });
       await saveRecent(name);
     } else {
       addToast(result.message, "error");

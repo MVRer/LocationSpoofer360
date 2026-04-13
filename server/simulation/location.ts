@@ -107,8 +107,25 @@ export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; mes
   }
 }
 
-export function resetLocation(): { ok: boolean; message: string } {
+export async function resetLocation(): Promise<{ ok: boolean; message: string }> {
   killActiveProcess();
+
+  // Also send explicit clear command for reliability
+  if (selectedUdid) {
+    const pmd3 = await findPMD3Path();
+    if (pmd3) {
+      try {
+        const proc = Bun.spawn(
+          [pmd3, "developer", "dvt", "simulate-location", "clear", "--tunnel", selectedUdid],
+          { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: getPythonEnvPath() } },
+        );
+        await proc.exited;
+      } catch {
+        // best effort
+      }
+    }
+  }
+
   currentLocation = null;
   broadcast({ type: "location:reset" });
   return { ok: true, message: "Location reset" };

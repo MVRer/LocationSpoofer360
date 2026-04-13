@@ -25,6 +25,6 @@ post("/api/location/set", async (req) => {
 
 post("/api/location/reset", async () => {
   log.sim("Reset location");
-  const result = resetLocation();
+  const result = await resetLocation();
   return json(result);
 });

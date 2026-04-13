@@ -24,7 +24,6 @@ export function Header() {
   const speedKmh = useStore((s) => s.speedKmh);
   const autoReverse = useStore((s) => s.autoReverse);
   const moveState = useStore((s) => s.moveState);
-  const currentLocation = useStore((s) => s.currentLocation);
   const sidebarOpen = useStore((s) => s.sidebarOpen);
   const autoFocus = useStore((s) => s.autoFocus);
   const toggleSidebar = useStore((s) => s.toggleSidebar);
@@ -156,8 +155,11 @@ export function Header() {
         <button
           type="button"
           className="flex items-center gap-1 px-2 py-1 text-[11px] border border-red-500/50 rounded bg-slate-800 text-red-400 hover:bg-red-500 hover:text-white cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={() => api.resetLocation()}
-          disabled={!currentLocation}
+          onClick={() => {
+            api.resetLocation();
+            useStore.getState().setCurrentLocation(null);
+            useStore.getState().setMoveState("idle");
+          }}
           title="Reset location"
         >
           <XCircleIcon className="w-3.5 h-3.5" />
