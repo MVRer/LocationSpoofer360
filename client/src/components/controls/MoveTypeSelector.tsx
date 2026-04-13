@@ -12,11 +12,15 @@ export function MoveTypeSelector() {
   const moveType = useStore((s) => s.moveType);
 
   return (
-    <div className="move-type-selector">
+    <div className="flex gap-0.5 bg-slate-950 rounded-md p-0.5">
       {TYPES.map(({ type, icon, label }) => (
         <button
           key={type}
-          className={`btn btn-type ${moveType === type ? "active" : ""}`}
+          className={`flex items-center gap-1 px-2.5 py-1 border-none rounded cursor-pointer text-xs transition-all ${
+            moveType === type
+              ? "bg-blue-500 text-white"
+              : "bg-transparent text-slate-400 hover:text-white"
+          }`}
           onClick={() => api.setMoveType(type)}
         >
           <span>{icon}</span>

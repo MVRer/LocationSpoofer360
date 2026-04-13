@@ -4,7 +4,9 @@ import { formatDistance } from "../../lib/geo";
 import { reverseGeocode } from "../../services/geocoding";
 
 export function StatusBar() {
-  const { currentLocation, totalDistanceMeters, moveState } = useStore();
+  const currentLocation = useStore((s) => s.currentLocation);
+  const totalDistanceMeters = useStore((s) => s.totalDistanceMeters);
+  const moveState = useStore((s) => s.moveState);
   const [locationName, setLocationName] = useState("");
 
   useEffect(() => {
@@ -12,8 +14,6 @@ export function StatusBar() {
       setLocationName("");
       return;
     }
-
-    // Only geocode when not actively navigating/moving (too many requests otherwise)
     if (moveState === "idle" || moveState === "manual") {
       const timeout = setTimeout(async () => {
         try {
@@ -28,29 +28,29 @@ export function StatusBar() {
   }, [currentLocation?.lat, currentLocation?.lng, moveState]);
 
   return (
-    <footer className="status-bar">
-      <div className="status-left">
+    <footer className="flex items-center justify-between px-3 py-1 bg-slate-900 border-t border-white/10 text-[11px] shrink-0 z-50">
+      <div className="flex items-center gap-3">
         {currentLocation ? (
           <>
-            <span className="status-coords">
+            <span className="font-mono text-slate-400">
               {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
             </span>
             {locationName && (
-              <span className="status-name">{locationName}</span>
+              <span className="text-slate-600 max-w-[300px] truncate">{locationName}</span>
             )}
           </>
         ) : (
-          <span className="text-muted">No location set</span>
+          <span className="text-slate-600">No location set</span>
         )}
       </div>
-      <div className="status-right">
+      <div className="flex items-center gap-3">
         {moveState !== "idle" && (
-          <span className="status-state">{moveState.toUpperCase()}</span>
+          <span className="px-1.5 py-0.5 rounded bg-blue-500 text-white font-semibold text-[10px] uppercase">
+            {moveState}
+          </span>
         )}
         {totalDistanceMeters > 0 && (
-          <span className="status-distance">
-            Total: {formatDistance(totalDistanceMeters)}
-          </span>
+          <span className="text-slate-400">Total: {formatDistance(totalDistanceMeters)}</span>
         )}
       </div>
     </footer>

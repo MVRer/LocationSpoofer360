@@ -12,8 +12,27 @@ import "./api/gpx.js";
 import "./api/settings.js";
 
 // Start device polling
-import { startDevicePolling } from "./device/discovery.js";
+import { startDevicePolling, stopDevicePolling } from "./device/discovery.js";
+import { cleanup as cleanupSimulation } from "./simulation/location.js";
+import { stopMovement } from "./simulation/movement.js";
+import { stopTunneld, wasTunneldStartedByUs } from "./tunnel/manager.js";
+
 startDevicePolling();
+
+// Cleanup on exit
+async function shutdown() {
+  console.log("\n[server] Shutting down...");
+  stopDevicePolling();
+  stopMovement();
+  cleanupSimulation();
+  if (wasTunneldStartedByUs()) {
+    console.log("[server] Stopping tunneld we started...");
+    await stopTunneld();
+  }
+  process.exit(0);
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 const server = Bun.serve({
   port: config.serverPort,

@@ -1,22 +1,21 @@
 import { Polyline } from "react-leaflet";
 import { useStore } from "../../store";
+import type { LatLngExpression } from "leaflet";
 
 export function RouteOverlay() {
-  const { traveledRoute, upcomingRoute } = useStore();
+  const traveledRoute = useStore((s) => s.traveledRoute);
+  const upcomingRoute = useStore((s) => s.upcomingRoute);
+
+  const traveled: LatLngExpression[] = traveledRoute.map((c) => [c.lat, c.lng]);
+  const upcoming: LatLngExpression[] = upcomingRoute.map((c) => [c.lat, c.lng]);
 
   return (
     <>
-      {traveledRoute.length > 1 && (
-        <Polyline
-          positions={traveledRoute.map((c) => [c.lat, c.lng])}
-          pathOptions={{ color: "#888", weight: 4, opacity: 0.6 }}
-        />
+      {traveled.length > 1 && (
+        <Polyline positions={traveled} pathOptions={{ color: "#6b7280", weight: 4, opacity: 0.6 }} />
       )}
-      {upcomingRoute.length > 1 && (
-        <Polyline
-          positions={upcomingRoute.map((c) => [c.lat, c.lng])}
-          pathOptions={{ color: "#2196F3", weight: 4, opacity: 0.9 }}
-        />
+      {upcoming.length > 1 && (
+        <Polyline positions={upcoming} pathOptions={{ color: "#3b82f6", weight: 4, opacity: 0.9 }} />
       )}
     </>
   );

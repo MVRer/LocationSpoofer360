@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.2",
     "leaflet": "^1.9.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
+    "tailwindcss": "^4.2.2",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

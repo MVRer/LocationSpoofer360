@@ -2,22 +2,18 @@ import { useState, useCallback, useRef } from "react";
 import { useStore } from "../../store";
 import { api } from "../../services/api";
 import { searchLocation, type SearchResult } from "../../services/geocoding";
-import { formatDistance } from "../../lib/geo";
 
 export function Sidebar() {
-  const {
-    devices,
-    selectedUdid,
-    tunnelRunning,
-    recentLocations,
-    sidebarOpen,
-    currentLocation,
-    addToast,
-  } = useStore();
+  const devices = useStore((s) => s.devices);
+  const selectedUdid = useStore((s) => s.selectedUdid);
+  const tunnelRunning = useStore((s) => s.tunnelRunning);
+  const recentLocations = useStore((s) => s.recentLocations);
+  const addToast = useStore((s) => s.addToast);
 
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [tunnelLoading, setTunnelLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const handleSearch = useCallback((query: string) => {
@@ -43,18 +39,7 @@ export function Sidebar() {
     setSearchResults([]);
     setSearchQuery("");
     const store = useStore.getState();
-    if (store.confirmTeleport) {
-      store.openDialog("teleport", { lat: result.lat, lng: result.lng, name: result.displayName });
-    } else {
-      const res = await api.setLocation(result.lat, result.lng);
-      if (res.ok) {
-        store.addRecentLocation({
-          coord: { lat: result.lat, lng: result.lng },
-          name: result.displayName,
-          timestamp: Date.now(),
-        });
-      }
-    }
+    store.openDialog("teleport", { lat: result.lat, lng: result.lng, name: result.displayName });
   };
 
   const handleSelectDevice = async (udid: string) => {
@@ -67,65 +52,93 @@ export function Sidebar() {
   };
 
   const handleStartTunnel = async () => {
+    setTunnelLoading(true);
     addToast("Starting tunnel (admin password may be required)...", "info");
     const result = await api.startTunnel();
+    setTunnelLoading(false);
     addToast(result.message, result.ok ? "success" : "error");
   };
 
-  if (!sidebarOpen) return null;
+  const handleStopTunnel = async () => {
+    const result = await api.stopTunnel();
+    addToast(result.message, result.ok ? "success" : "error");
+  };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-section">
+    <aside className="w-[260px] min-w-[200px] bg-slate-900 border-r border-white/10 overflow-y-auto shrink-0">
+      {/* Search */}
+      <div className="p-3 border-b border-white/10">
         <input
           type="text"
-          className="search-input"
+          className="w-full px-2.5 py-2 bg-slate-950 border border-white/10 rounded-md text-slate-200 text-sm outline-none focus:border-blue-500 placeholder:text-slate-600"
           placeholder="Search location..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
         />
         {searchResults.length > 0 && (
-          <ul className="search-results">
+          <ul className="mt-1 bg-slate-950 border border-white/10 rounded-md max-h-[200px] overflow-y-auto list-none">
             {searchResults.map((r, i) => (
-              <li key={i} onClick={() => handleSelectSearchResult(r)}>
-                <span className="search-result-name">{r.displayName}</span>
+              <li
+                key={i}
+                className="px-2.5 py-2 cursor-pointer border-b border-white/10 last:border-b-0 text-xs leading-relaxed hover:bg-slate-800 transition-colors"
+                onClick={() => handleSelectSearchResult(r)}
+              >
+                {r.displayName}
               </li>
             ))}
           </ul>
         )}
-        {searching && <div className="search-loading">Searching...</div>}
+        {searching && <div className="py-2 text-xs text-slate-500">Searching...</div>}
       </div>
 
-      <div className="sidebar-section">
-        <h3>
+      {/* Tunnel */}
+      <div className="p-3 border-b border-white/10">
+        <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
           Tunnel
-          <span className={`status-dot ${tunnelRunning ? "active" : ""}`} />
+          <span className={`inline-block w-2 h-2 rounded-full ml-1.5 ${tunnelRunning ? "bg-green-500" : "bg-red-500"}`} />
         </h3>
         {!tunnelRunning ? (
-          <button className="btn btn-sm" onClick={handleStartTunnel}>
-            Start Tunnel
+          <button
+            className="px-2.5 py-1 text-xs border border-white/10 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer transition-all disabled:opacity-50"
+            onClick={handleStartTunnel}
+            disabled={tunnelLoading}
+          >
+            {tunnelLoading ? "Starting..." : "Start Tunnel"}
           </button>
         ) : (
-          <span className="text-muted">Running</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-green-400">Running</span>
+            <button
+              className="text-xs text-red-400 hover:text-red-300 bg-transparent border-none cursor-pointer"
+              onClick={handleStopTunnel}
+            >
+              Stop
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="sidebar-section">
-        <h3>Devices</h3>
+      {/* Devices */}
+      <div className="p-3 border-b border-white/10">
+        <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2">Devices</h3>
         {devices.length === 0 ? (
-          <p className="text-muted">No devices found</p>
+          <p className="text-xs text-slate-600">No devices found</p>
         ) : (
-          <ul className="device-list">
+          <ul className="list-none space-y-1">
             {devices.map((d) => (
               <li
                 key={d.udid}
-                className={`device-item ${d.udid === selectedUdid ? "selected" : ""}`}
+                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                  d.udid === selectedUdid
+                    ? "bg-blue-500/20 outline outline-1 outline-blue-500"
+                    : "hover:bg-slate-800"
+                }`}
                 onClick={() => handleSelectDevice(d.udid)}
               >
-                <span className="device-icon">{d.connectionType === "usb" ? "🔌" : "📶"}</span>
-                <div className="device-info">
-                  <span className="device-name">{d.name}</span>
-                  <span className="device-version">iOS {d.osVersion}</span>
+                <span className="text-base shrink-0">{d.connectionType === "usb" ? "🔌" : "📶"}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-medium truncate">{d.name}</span>
+                  <span className="text-[11px] text-slate-400">iOS {d.osVersion}</span>
                 </div>
               </li>
             ))}
@@ -133,36 +146,33 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Recent Locations */}
       {recentLocations.length > 0 && (
-        <div className="sidebar-section">
-          <h3>
+        <div className="p-3">
+          <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
             Recent
             <button
-              className="btn-link"
+              className="text-blue-400 hover:underline text-[11px] bg-transparent border-none cursor-pointer normal-case tracking-normal"
               onClick={() => useStore.getState().clearRecentLocations()}
             >
               Clear
             </button>
           </h3>
-          <ul className="recent-list">
+          <ul className="list-none space-y-0.5">
             {recentLocations.map((loc, i) => (
               <li
                 key={i}
+                className="p-1.5 rounded cursor-pointer hover:bg-slate-800 transition-colors"
                 onClick={() => {
-                  const store = useStore.getState();
-                  if (store.confirmTeleport) {
-                    store.openDialog("teleport", {
-                      lat: loc.coord.lat,
-                      lng: loc.coord.lng,
-                      name: loc.name,
-                    });
-                  } else {
-                    api.setLocation(loc.coord.lat, loc.coord.lng);
-                  }
+                  useStore.getState().openDialog("teleport", {
+                    lat: loc.coord.lat,
+                    lng: loc.coord.lng,
+                    name: loc.name,
+                  });
                 }}
               >
-                <span className="recent-name">{loc.name.split(",")[0]}</span>
-                <span className="recent-coords">
+                <span className="block text-xs truncate">{loc.name.split(",")[0]}</span>
+                <span className="text-[10px] text-slate-600">
                   {loc.coord.lat.toFixed(4)}, {loc.coord.lng.toFixed(4)}
                 </span>
               </li>

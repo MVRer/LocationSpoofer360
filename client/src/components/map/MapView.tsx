@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, ZoomControl } from "react-leaflet";
+import { useState } from "react";
+import { MapContainer, TileLayer, ZoomControl, LayersControl } from "react-leaflet";
 import { LocationMarker } from "./LocationMarker";
 import { RouteOverlay } from "./RouteOverlay";
 import { ClickHandler } from "./ClickHandler";
@@ -9,12 +10,28 @@ export function MapView() {
       center={[37.7749, -122.4194]}
       zoom={13}
       zoomControl={false}
-      className="map-container"
+      className="w-full h-full"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="Standard">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Satellite">
+          <TileLayer
+            attribution='&copy; Esri'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Topo">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+      </LayersControl>
       <ZoomControl position="topright" />
       <LocationMarker />
       <RouteOverlay />

@@ -2,10 +2,11 @@ import { useEffect, useRef, useMemo } from "react";
 import { Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useStore } from "../../store";
-import { api } from "../../services/api";
 
 export function LocationMarker() {
-  const { currentLocation, heading, moveState } = useStore();
+  const currentLocation = useStore((s) => s.currentLocation);
+  const heading = useStore((s) => s.heading);
+  const moveState = useStore((s) => s.moveState);
   const map = useMap();
   const markerRef = useRef<L.Marker>(null);
   const initialFocusDone = useRef(false);
@@ -40,8 +41,7 @@ export function LocationMarker() {
     const marker = markerRef.current;
     if (marker) {
       const pos = marker.getLatLng();
-      const store = useStore.getState();
-      store.openDialog("teleport", { lat: pos.lat, lng: pos.lng });
+      useStore.getState().openDialog("teleport", { lat: pos.lat, lng: pos.lng });
     }
   };
 
