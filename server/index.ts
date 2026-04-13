@@ -93,37 +93,36 @@ const _server = Bun.serve({
     return json({ error: "Not found" }, 404);
   },
   websocket: {
-    async open(ws) {
+    open(ws) {
       addClient(ws);
       log.ws("Client connected");
-
-      // Push current state immediately so the client doesn't start empty
-      send(ws, { type: "device:list", devices: getDevices() });
-      send(ws, { type: "tunnel:status", running: await isTunneldRunning() });
-
-      const loc = getCurrentLocation();
-      if (loc) {
-        send(ws, {
-          type: "location:changed",
-          lat: loc.lat,
-          lng: loc.lng,
-          heading: getCurrentHeading(),
-        });
-        send(ws, { type: "moveState:changed", state: getMoveState() });
-        send(ws, { type: "moveType:changed", moveType: getMoveType() });
-        send(ws, { type: "speed:changed", kmh: getSpeedKmh() });
-        send(ws, { type: "distance:update", totalMeters: getTotalDistance() });
-      }
     },
     close(ws) {
       removeClient(ws);
       log.ws("Client disconnected");
     },
-    message(ws, message) {
+    async message(ws, message) {
       try {
         const data = JSON.parse(String(message));
         if (data.type === "ping") {
           ws.send(JSON.stringify({ type: "pong" }));
+        } else if (data.type === "init") {
+          log.ws("Client requested state sync");
+          send(ws, { type: "device:list", devices: getDevices() });
+          send(ws, { type: "tunnel:status", running: await isTunneldRunning() });
+          const loc = getCurrentLocation();
+          if (loc) {
+            send(ws, {
+              type: "location:changed",
+              lat: loc.lat,
+              lng: loc.lng,
+              heading: getCurrentHeading(),
+            });
+            send(ws, { type: "moveState:changed", state: getMoveState() });
+            send(ws, { type: "moveType:changed", moveType: getMoveType() });
+            send(ws, { type: "speed:changed", kmh: getSpeedKmh() });
+            send(ws, { type: "distance:update", totalMeters: getTotalDistance() });
+          }
         }
       } catch {
         // ignore malformed messages

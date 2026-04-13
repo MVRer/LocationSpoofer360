@@ -11,6 +11,11 @@ export function useWebSocket() {
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
       wsRef.current = ws;
 
+      ws.onopen = () => {
+        // Ask the server to push current state now that the connection is established
+        ws.send(JSON.stringify({ type: "init" }));
+      };
+
       ws.onmessage = (event) => {
         try {
           const msg: ServerMessage = JSON.parse(event.data);
