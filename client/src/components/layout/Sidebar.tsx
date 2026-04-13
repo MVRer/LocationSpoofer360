@@ -66,11 +66,13 @@ export function Sidebar() {
     addToast("Starting tunnel (admin password may be required)...", "info");
     const result = await api.startTunnel();
     setTunnelLoading(false);
+    useStore.getState().setTunnelRunning(result.running);
     addToast(result.message, result.ok ? "success" : "error");
   };
 
   const handleStopTunnel = async () => {
     const result = await api.stopTunnel();
+    useStore.getState().setTunnelRunning(result.running);
     addToast(result.message, result.ok ? "success" : "error");
   };
 

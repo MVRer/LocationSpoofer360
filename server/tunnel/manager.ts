@@ -1,5 +1,6 @@
 import { TUNNEL_CHECK_INTERVAL_MS, TUNNEL_CHECK_TIMEOUT_MS } from "../../shared/constants.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
+import { log } from "../log.js";
 import { broadcast } from "../ws/handler.js";
 
 let tunneldStartedByUs = false;
@@ -17,32 +18,35 @@ export async function isTunneldRunning(): Promise<boolean> {
   }
 }
 
-export async function startTunneld(): Promise<{ ok: boolean; message: string }> {
-  if (await isTunneldRunning()) {
+export async function startTunneld(): Promise<{ ok: boolean; message: string; running: boolean }> {
+  const alreadyRunning = await isTunneldRunning();
+  if (alreadyRunning) {
+    log.tunnel("Already running");
     broadcast({ type: "tunnel:status", running: true });
-    return { ok: true, message: "Tunnel already running" };
+    return { ok: true, message: "Tunnel already running", running: true };
   }
 
   const pmd3 = await findPMD3Path();
   if (!pmd3) {
+    log.error("pymobiledevice3 not found");
     return {
       ok: false,
       message: "pymobiledevice3 not found. Install with: pip3 install pymobiledevice3",
+      running: false,
     };
   }
 
+  log.tunnel("Starting...");
   const platform = process.platform;
 
   try {
     if (platform === "darwin") {
-      // macOS: use osascript for native admin password dialog
       const script = `do shell script "PATH=${getPythonEnvPath()} ${pmd3} remote tunneld -d" with administrator privileges`;
       Bun.spawn(["osascript", "-e", script], {
         stdout: "ignore",
         stderr: "ignore",
       });
     } else {
-      // Linux: spawn with sudo (user must have passwordless sudo or run in terminal)
       Bun.spawn(["sudo", pmd3, "remote", "tunneld", "-d"], {
         stdout: "ignore",
         stderr: "ignore",
@@ -56,26 +60,32 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string }> 
       await Bun.sleep(TUNNEL_CHECK_INTERVAL_MS);
       if (await isTunneldRunning()) {
         tunneldStartedByUs = true;
+        log.tunnel("Started successfully");
         broadcast({ type: "tunnel:status", running: true });
-        return { ok: true, message: "Tunnel started" };
+        return { ok: true, message: "Tunnel started", running: true };
       }
     }
 
+    log.error("Tunnel failed to start within timeout");
     return {
       ok: false,
       message: "Tunnel failed to start within timeout. Was the password dialog cancelled?",
+      running: false,
     };
   } catch (err) {
-    return { ok: false, message: `Failed to start tunnel: ${err}` };
+    log.error(`Failed to start tunnel: ${err}`);
+    return { ok: false, message: `Failed to start tunnel: ${err}`, running: false };
   }
 }
 
-export async function stopTunneld(): Promise<{ ok: boolean; message: string }> {
+export async function stopTunneld(): Promise<{ ok: boolean; message: string; running: boolean }> {
   if (!(await isTunneldRunning())) {
+    log.tunnel("Not running, nothing to stop");
     broadcast({ type: "tunnel:status", running: false });
-    return { ok: true, message: "Tunnel not running" };
+    return { ok: true, message: "Tunnel not running", running: false };
   }
 
+  log.tunnel("Stopping...");
   try {
     if (process.platform === "darwin") {
       const script = `do shell script "kill $(pgrep -f 'pymobiledevice3.*tunneld')" with administrator privileges`;
@@ -93,10 +103,12 @@ export async function stopTunneld(): Promise<{ ok: boolean; message: string }> {
     }
 
     tunneldStartedByUs = false;
+    log.tunnel("Stopped");
     broadcast({ type: "tunnel:status", running: false });
-    return { ok: true, message: "Tunnel stopped" };
+    return { ok: true, message: "Tunnel stopped", running: false };
   } catch (err) {
-    return { ok: false, message: `Failed to stop tunnel: ${err}` };
+    log.error(`Failed to stop tunnel: ${err}`);
+    return { ok: false, message: `Failed to stop tunnel: ${err}`, running: false };
   }
 }
 

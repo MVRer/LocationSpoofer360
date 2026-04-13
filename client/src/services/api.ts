@@ -7,6 +7,10 @@ interface OkResponse {
   message: string;
 }
 
+interface TunnelResponse extends OkResponse {
+  running: boolean;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -21,8 +25,8 @@ export const api = {
   selectDevice: (udid: string) => request<OkResponse>("POST", `/api/devices/${udid}/select`),
 
   getTunnelStatus: () => request<{ running: boolean }>("GET", "/api/tunnel/status"),
-  startTunnel: () => request<OkResponse>("POST", "/api/tunnel/start"),
-  stopTunnel: () => request<OkResponse>("POST", "/api/tunnel/stop"),
+  startTunnel: () => request<TunnelResponse>("POST", "/api/tunnel/start"),
+  stopTunnel: () => request<TunnelResponse>("POST", "/api/tunnel/stop"),
 
   setLocation: (lat: number, lng: number) =>
     request<OkResponse>("POST", "/api/location/set", { lat, lng }),
