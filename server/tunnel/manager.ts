@@ -88,18 +88,29 @@ export async function stopTunneld(): Promise<{ ok: boolean; message: string; run
   log.tunnel("Stopping...");
   try {
     if (process.platform === "darwin") {
-      const script = `do shell script "kill $(pgrep -f 'pymobiledevice3.*tunneld')" with administrator privileges`;
+      const script = `do shell script "kill -9 $(pgrep -f 'pymobiledevice3.*tunneld')" with administrator privileges`;
       const proc = Bun.spawn(["osascript", "-e", script], {
-        stdout: "ignore",
-        stderr: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
       });
       await proc.exited;
+      if (proc.exitCode !== 0) {
+        const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
+        log.error(`osascript kill failed (exit ${proc.exitCode}): ${stderr.trim()}`);
+      }
     } else {
-      const proc = Bun.spawn(["bash", "-c", "sudo kill $(pgrep -f 'pymobiledevice3.*tunneld')"], {
-        stdout: "ignore",
-        stderr: "ignore",
-      });
+      const proc = Bun.spawn(
+        ["bash", "-c", "sudo kill -9 $(pgrep -f 'pymobiledevice3.*tunneld')"],
+        { stdout: "ignore", stderr: "ignore" },
+      );
       await proc.exited;
+    }
+
+    // Verify it's actually dead
+    await Bun.sleep(500);
+    if (await isTunneldRunning()) {
+      log.error("Tunnel still running after kill -9");
+      return { ok: false, message: "Failed to stop tunnel", running: true };
     }
 
     tunneldStartedByUs = false;

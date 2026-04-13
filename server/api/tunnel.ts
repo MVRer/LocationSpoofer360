@@ -2,9 +2,9 @@ import { log } from "../log.js";
 import { isTunneldRunning, startTunneld, stopTunneld } from "../tunnel/manager.js";
 import { get, json, post } from "./router.js";
 
+// Status is polled every 3s by the client -- don't log every check
 get("/api/tunnel/status", async () => {
   const running = await isTunneldRunning();
-  log.tunnel(`Status check: ${running ? "running" : "not running"}`);
   return json({ running });
 });
 
