@@ -5,7 +5,7 @@ import {
   SignalIcon,
   WifiIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
 import { type SearchResult, searchLocation } from "../../services/geocoding";
 import { useStore } from "../../store";
@@ -22,6 +22,17 @@ export function Sidebar() {
   const [searching, setSearching] = useState(false);
   const [tunnelLoading, setTunnelLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Poll devices and tunnel status directly via REST
+  useEffect(() => {
+    function poll() {
+      api.getDevices().then((d) => useStore.getState().setDevices(d));
+      api.getTunnelStatus().then((s) => useStore.getState().setTunnelRunning(s.running));
+    }
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
