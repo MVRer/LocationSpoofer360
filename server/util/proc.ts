@@ -74,8 +74,9 @@ export function fireAndForget(
 }
 
 /**
- * Spawn a process, killing any previous one from the same slot.
- * Only one process per slot is alive at a time.
+ * Spawn a process only if the previous one in the same slot has finished.
+ * Skips the spawn if one is still running — avoids zombie pile-up
+ * without killing mid-execution (which could cause position glitches).
  */
 const activeProcs = new Map<string, ChildProcess>();
 
@@ -84,14 +85,10 @@ export function spawnExclusive(
   cmd: string[],
   options: SpawnOptions = {},
 ) {
-  // Kill the previous process in this slot
+  // If the previous process is still running, skip this spawn
   const prev = activeProcs.get(slot);
   if (prev && prev.exitCode === null) {
-    try {
-      prev.kill("SIGTERM");
-    } catch {
-      // already dead
-    }
+    return;
   }
 
   try {
