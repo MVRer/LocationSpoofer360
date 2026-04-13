@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { json, matchRoute } from "./api/router.js";
 import { config } from "./config.js";
-import { matchRoute, json } from "./api/router.js";
 import { addClient, removeClient } from "./ws/handler.js";
 
 // Register API routes
@@ -10,6 +12,7 @@ import "./api/movement.js";
 import "./api/navigation.js";
 import "./api/gpx.js";
 import "./api/settings.js";
+import "./api/recentLocations.js";
 
 // Start device polling
 import { startDevicePolling, stopDevicePolling } from "./device/discovery.js";
@@ -34,7 +37,13 @@ async function shutdown() {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-const server = Bun.serve({
+// Production static file serving
+const DIST_DIR = path.resolve(import.meta.dir, "../client/dist");
+const _isDev =
+  process.env.NODE_ENV !== "production" &&
+  existsSync(path.resolve(import.meta.dir, "../client/node_modules/.vite"));
+
+const _server = Bun.serve({
   port: config.serverPort,
   async fetch(req, server) {
     const url = new URL(req.url);
@@ -47,7 +56,7 @@ const server = Bun.serve({
 
     // CORS headers for dev
     const corsHeaders: Record<string, string> = {
-      "Access-Control-Allow-Origin": config.clientOrigin,
+      "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
@@ -60,11 +69,24 @@ const server = Bun.serve({
     const match = matchRoute(req);
     if (match) {
       const response = await match.handler(req, match.params);
-      // Add CORS headers to response
       for (const [key, value] of Object.entries(corsHeaders)) {
         response.headers.set(key, value);
       }
       return response;
+    }
+
+    // Serve static files from dist/ in production
+    if (existsSync(DIST_DIR)) {
+      let filePath = path.join(DIST_DIR, url.pathname);
+
+      // If path is a directory or doesn't exist, serve index.html (SPA fallback)
+      if (!existsSync(filePath) || url.pathname === "/") {
+        filePath = path.join(DIST_DIR, "index.html");
+      }
+
+      if (existsSync(filePath)) {
+        return new Response(Bun.file(filePath));
+      }
     }
 
     return json({ error: "Not found" }, 404);

@@ -15,7 +15,7 @@ export interface RouteResult {
 export async function calculateRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
-  moveType: string
+  moveType: string,
 ): Promise<RouteResult> {
   const profile = PROFILE_MAP[moveType] ?? "car";
   const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;

@@ -1,12 +1,12 @@
-import { useEffect, useRef, useMemo } from "react";
-import { Marker, useMap } from "react-leaflet";
 import L from "leaflet";
+import { useEffect, useMemo, useRef } from "react";
+import { Marker, useMap } from "react-leaflet";
 import { useStore } from "../../store";
 
 export function LocationMarker() {
   const currentLocation = useStore((s) => s.currentLocation);
   const heading = useStore((s) => s.heading);
-  const moveState = useStore((s) => s.moveState);
+  const autoFocus = useStore((s) => s.autoFocus);
   const map = useMap();
   const markerRef = useRef<L.Marker>(null);
   const initialFocusDone = useRef(false);
@@ -22,18 +22,18 @@ export function LocationMarker() {
         iconSize: [24, 24],
         iconAnchor: [12, 12],
       }),
-    [heading]
+    [heading],
   );
 
   useEffect(() => {
-    if (currentLocation && (!initialFocusDone.current || moveState === "idle" || moveState === "manual")) {
-      map.setView([currentLocation.lat, currentLocation.lng], map.getZoom(), {
-        animate: true,
-        duration: 0.5,
-      });
-      initialFocusDone.current = true;
-    }
-  }, [currentLocation, map, moveState]);
+    if (!currentLocation) return;
+    if (!autoFocus && initialFocusDone.current) return;
+    map.setView([currentLocation.lat, currentLocation.lng], map.getZoom(), {
+      animate: true,
+      duration: 0.5,
+    });
+    initialFocusDone.current = true;
+  }, [currentLocation, map, autoFocus]);
 
   if (!currentLocation) return null;
 

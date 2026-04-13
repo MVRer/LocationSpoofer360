@@ -1,18 +1,13 @@
-import type { Coord, MoveType, MoveState } from "../../shared/types.js";
 import {
-  DEFAULT_SPEEDS,
   AUTO_MOVE_INTERVAL_MS,
-  SPEED_VARIANCE_MIN,
-  SPEED_VARIANCE_MAX,
+  DEFAULT_SPEEDS,
   kmhToMs,
+  SPEED_VARIANCE_MAX,
+  SPEED_VARIANCE_MIN,
 } from "../../shared/constants.js";
+import type { Coord, MoveState, MoveType } from "../../shared/types.js";
 import { broadcast } from "../ws/handler.js";
-import {
-  getCurrentLocation,
-  getCurrentHeading,
-  setCurrentHeading,
-  simulateLocation,
-} from "./location.js";
+import { getCurrentHeading, getCurrentLocation, simulateLocation } from "./location.js";
 import { advanceNavigation, getNavigation, stopNavigation } from "./navigation.js";
 
 let moveType: MoveType = "walk";
@@ -79,7 +74,8 @@ export function bearing(from: Coord, to: Coord): number {
   const fromLat = toRad(from.lat);
   const toLat = toRad(to.lat);
   const y = Math.sin(dLng) * Math.cos(toLat);
-  const x = Math.cos(fromLat) * Math.sin(toLat) - Math.sin(fromLat) * Math.cos(toLat) * Math.cos(dLng);
+  const x =
+    Math.cos(fromLat) * Math.sin(toLat) - Math.sin(fromLat) * Math.cos(toLat) * Math.cos(dLng);
   return ((toDeg(Math.atan2(y, x)) % 360) + 360) % 360;
 }
 
@@ -88,9 +84,15 @@ export function destinationPoint(from: Coord, bearingDeg: number, distanceMeters
   const brng = toRad(bearingDeg);
   const lat1 = toRad(from.lat);
   const lng1 = toRad(from.lng);
-  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng),
+  );
   const lng2 =
-    lng1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+    lng1 +
+    Math.atan2(
+      Math.sin(brng) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
   return { lat: toDeg(lat2), lng: toDeg(lng2) };
 }
 

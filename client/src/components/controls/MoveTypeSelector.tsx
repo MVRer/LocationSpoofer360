@@ -1,6 +1,6 @@
-import { useStore } from "../../store";
-import { api } from "../../services/api";
 import type { MoveType } from "@shared/types";
+import { api } from "../../services/api";
+import { useStore } from "../../store";
 
 const TYPES: { type: MoveType; icon: string; label: string }[] = [
   { type: "walk", icon: "🚶", label: "Walk" },
@@ -15,6 +15,7 @@ export function MoveTypeSelector() {
     <div className="flex gap-0.5 bg-slate-950 rounded-md p-0.5">
       {TYPES.map(({ type, icon, label }) => (
         <button
+          type="button"
           key={type}
           className={`flex items-center gap-1 px-2.5 py-1 border-none rounded cursor-pointer text-xs transition-all ${
             moveType === type

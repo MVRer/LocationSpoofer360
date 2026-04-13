@@ -13,7 +13,7 @@ export function CoordinateInput() {
     e.preventDefault();
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
-    if (isNaN(latNum) || isNaN(lngNum)) return;
+    if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
     closeDialog();
     useStore.getState().openDialog("teleport", { lat: latNum, lng: lngNum });
   };
@@ -29,26 +29,37 @@ export function CoordinateInput() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]" onClick={closeDialog}>
-      <div className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[320px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]"
+      onClick={closeDialog}
+    >
+      <div
+        className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[320px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-base font-semibold mb-3">Go to Coordinates</h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="block mb-1 text-xs text-slate-400">Latitude</label>
+            <label htmlFor="lat-input" className="block mb-1 text-xs text-slate-400">
+              Latitude
+            </label>
             <input
+              id="lat-input"
               type="number"
               step="any"
               value={lat}
               onChange={(e) => setLat(e.target.value)}
               onPaste={handlePaste}
               placeholder="e.g. 37.7749"
-              autoFocus
               className="w-full px-2.5 py-2 bg-slate-950 border border-white/10 rounded-md text-slate-200 text-sm outline-none focus:border-blue-500"
             />
           </div>
           <div className="mb-3">
-            <label className="block mb-1 text-xs text-slate-400">Longitude</label>
+            <label htmlFor="lng-input" className="block mb-1 text-xs text-slate-400">
+              Longitude
+            </label>
             <input
+              id="lng-input"
               type="number"
               step="any"
               value={lng}

@@ -63,8 +63,12 @@ export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; mes
   try {
     const args = [
       pmd3,
-      "developer", "dvt", "simulate-location", "set",
-      "--tunnel", selectedUdid,
+      "developer",
+      "dvt",
+      "simulate-location",
+      "set",
+      "--tunnel",
+      selectedUdid,
       "--",
       String(coord.lat),
       String(coord.lng),
@@ -81,9 +85,12 @@ export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; mes
 
     if (activeProcess.exitCode !== null) {
       // Process exited early - read stderr for error
-      const stderr = await new Response(activeProcess.stderr).text();
+      let stderrText = "";
+      if (activeProcess.stderr && typeof activeProcess.stderr !== "number") {
+        stderrText = await new Response(activeProcess.stderr).text();
+      }
       activeProcess = null;
-      return { ok: false, message: `Simulation failed: ${stderr.trim() || "process exited"}` };
+      return { ok: false, message: `Simulation failed: ${stderrText.trim() || "process exited"}` };
     }
 
     currentLocation = coord;

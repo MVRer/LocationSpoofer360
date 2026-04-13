@@ -1,11 +1,8 @@
 import type { Coord } from "../../shared/types.js";
-import { NavigationRoute } from "./route.js";
 import { broadcast } from "../ws/handler.js";
-import {
-  getCurrentLocation,
-  setCurrentHeading,
-} from "./location.js";
-import { bearing, haversineDistance, destinationPoint } from "./movement.js";
+import { getCurrentLocation, setCurrentHeading } from "./location.js";
+import { bearing, destinationPoint, haversineDistance } from "./movement.js";
+import { NavigationRoute } from "./route.js";
 
 let currentRoute: NavigationRoute | null = null;
 let autoReverse = false;

@@ -1,14 +1,14 @@
-import { post, json, error } from "./router.js";
 import { setCurrentHeading } from "../simulation/location.js";
 import {
-  step,
+  setMoveStateManual,
   setMoveType,
   setSpeedKmh,
-  startAutoMove,
-  stopAutoMove,
-  setMoveStateManual,
   setSpeedVariance,
+  startAutoMove,
+  step,
+  stopAutoMove,
 } from "../simulation/movement.js";
+import { error, json, post } from "./router.js";
 
 post("/api/movement/step", async () => {
   setMoveStateManual();

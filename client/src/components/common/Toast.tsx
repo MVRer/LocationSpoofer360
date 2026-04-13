@@ -15,8 +15,8 @@ export function ToastContainer() {
             t.type === "error"
               ? "bg-red-950 border border-red-500 text-red-300"
               : t.type === "success"
-              ? "bg-green-950 border border-green-500 text-green-300"
-              : "bg-slate-800 border border-blue-500 text-slate-200"
+                ? "bg-green-950 border border-green-500 text-green-300"
+                : "bg-slate-800 border border-blue-500 text-slate-200"
           }`}
           onClick={() => removeToast(t.id)}
         >

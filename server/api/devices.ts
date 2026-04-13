@@ -1,6 +1,6 @@
-import { get, post, json, error } from "./router.js";
 import { getDevices, refreshDevices } from "../device/discovery.js";
 import { setSelectedUdid } from "../simulation/location.js";
+import { error, get, json, post } from "./router.js";
 
 get("/api/devices", async () => {
   const devices = await refreshDevices();

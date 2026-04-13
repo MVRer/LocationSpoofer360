@@ -28,7 +28,7 @@ export function msToKmh(ms: number): number {
 }
 
 export function sliderToKmh(sliderValue: number): number {
-  return Math.pow(SPEED_SLIDER_LOG_BASE, sliderValue * SPEED_SLIDER_MAX_EXPONENT);
+  return SPEED_SLIDER_LOG_BASE ** (sliderValue * SPEED_SLIDER_MAX_EXPONENT);
 }
 
 export function kmhToSlider(kmh: number): number {

@@ -1,6 +1,6 @@
-import { post, json, error } from "./router.js";
-import { simulateLocation, resetLocation } from "../simulation/location.js";
+import { resetLocation, simulateLocation } from "../simulation/location.js";
 import { setMoveStateManual } from "../simulation/movement.js";
+import { error, json, post } from "./router.js";
 
 post("/api/location/set", async (req) => {
   const body = await req.json();

@@ -1,19 +1,20 @@
+import { DevicePhoneMobileIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
-import { Sidebar } from "./components/layout/Sidebar";
-import { Header } from "./components/layout/Header";
-import { StatusBar } from "./components/layout/StatusBar";
-import { MapView } from "./components/map/MapView";
-import { MovementButton } from "./components/controls/MovementButton";
+import { ToastContainer } from "./components/common/Toast";
 import { DirectionWheel } from "./components/controls/DirectionWheel";
-import { TeleportDialog } from "./components/dialogs/TeleportDialog";
+import { MovementButton } from "./components/controls/MovementButton";
 import { CoordinateInput } from "./components/dialogs/CoordinateInput";
 import { GpxDialog } from "./components/dialogs/GpxDialog";
 import { SettingsDialog } from "./components/dialogs/SettingsDialog";
-import { ToastContainer } from "./components/common/Toast";
-import { useWebSocket } from "./hooks/useWebSocket";
+import { TeleportDialog } from "./components/dialogs/TeleportDialog";
+import { Header } from "./components/layout/Header";
+import { Sidebar } from "./components/layout/Sidebar";
+import { StatusBar } from "./components/layout/StatusBar";
+import { MapView } from "./components/map/MapView";
 import { useKeyboard } from "./hooks/useKeyboard";
-import { useStore } from "./store";
+import { useWebSocket } from "./hooks/useWebSocket";
 import { api } from "./services/api";
+import { useStore } from "./store";
 
 export function App() {
   useWebSocket();
@@ -23,8 +24,6 @@ export function App() {
   const selectedUdid = useStore((s) => s.selectedUdid);
 
   useEffect(() => {
-    api.getDevices().then((devices) => useStore.getState().setDevices(devices));
-    api.getTunnelStatus().then(({ running }) => useStore.getState().setTunnelRunning(running));
     api.getSettings().then((settings) => {
       const s = useStore.getState();
       if (settings.confirmTeleport !== undefined) s.setConfirmTeleport(settings.confirmTeleport);
@@ -42,13 +41,14 @@ export function App() {
           {selectedUdid ? (
             <MapView />
           ) : (
-            <div className="flex flex-col items-center justify-center flex-1 text-slate-500 gap-2">
-              <div className="text-5xl opacity-50">📱</div>
+            <div className="flex flex-col items-center justify-center flex-1 text-slate-500 gap-3">
+              <DevicePhoneMobileIcon className="w-12 h-12 opacity-40" />
               <h2 className="text-lg font-medium text-slate-400">No Device Selected</h2>
-              <p className="text-slate-600">Select a device from the sidebar or start the tunnel first.</p>
+              <p className="text-slate-600 text-xs">
+                Select a device from the sidebar or start the tunnel first.
+              </p>
             </div>
           )}
-          {/* Controls overlay - bottom left on map */}
           <div className="absolute bottom-5 left-5 z-[1000] pointer-events-none">
             <div className="relative w-[120px] h-[120px] pointer-events-auto">
               <DirectionWheel />

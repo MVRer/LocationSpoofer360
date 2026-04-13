@@ -1,7 +1,7 @@
-import { useStore } from "../../store";
 import { api } from "../../services/api";
-import { calculateRoute } from "../../services/routing";
 import { reverseGeocode } from "../../services/geocoding";
+import { calculateRoute } from "../../services/routing";
+import { useStore } from "../../store";
 
 export function TeleportDialog() {
   const activeDialog = useStore((s) => s.activeDialog);
@@ -15,16 +15,20 @@ export function TeleportDialog() {
 
   const { lat, lng, name } = dialogData;
 
+  const saveRecent = async (locationName?: string) => {
+    const resolvedName =
+      locationName ??
+      (await reverseGeocode(lat, lng).catch(() => `${lat.toFixed(4)}, ${lng.toFixed(4)}`));
+    const loc = { coord: { lat, lng }, name: resolvedName, timestamp: Date.now() };
+    useStore.getState().addRecentLocation(loc);
+    api.addRecentLocation(loc);
+  };
+
   const handleTeleport = async () => {
     closeDialog();
     const result = await api.setLocation(lat, lng);
     if (result.ok) {
-      const locationName = name ?? await reverseGeocode(lat, lng).catch(() => `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      useStore.getState().addRecentLocation({
-        coord: { lat, lng },
-        name: locationName,
-        timestamp: Date.now(),
-      });
+      await saveRecent(name);
     } else {
       addToast(result.message, "error");
     }
@@ -44,14 +48,21 @@ export function TeleportDialog() {
         return;
       }
       await api.startNavigation(route.coordinates);
+      await saveRecent(name);
     } catch (err) {
       addToast(`Routing failed: ${err}`, "error");
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]" onClick={closeDialog}>
-      <div className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[320px] max-w-[450px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]"
+      onClick={closeDialog}
+    >
+      <div
+        className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[320px] max-w-[450px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-base font-semibold mb-3">Set Location</h3>
         <p className="font-mono text-sm text-slate-400 mb-1">
           {lat.toFixed(6)}, {lng.toFixed(6)}
@@ -59,6 +70,7 @@ export function TeleportDialog() {
         {name && <p className="text-xs text-slate-500 mb-3">{name}</p>}
         <div className="flex justify-end gap-2 mt-4">
           <button
+            type="button"
             className="px-3 py-1.5 text-xs border border-white/10 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer transition-all"
             onClick={closeDialog}
           >
@@ -66,6 +78,7 @@ export function TeleportDialog() {
           </button>
           {currentLocation && (
             <button
+              type="button"
               className="px-3 py-1.5 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer transition-all border border-blue-500"
               onClick={handleNavigate}
             >
@@ -73,6 +86,7 @@ export function TeleportDialog() {
             </button>
           )}
           <button
+            type="button"
             className="px-3 py-1.5 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer transition-all border border-blue-500"
             onClick={handleTeleport}
           >

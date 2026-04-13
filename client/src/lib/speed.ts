@@ -1,12 +1,12 @@
 import {
+  MAX_SPEED_KMH,
+  MIN_SPEED_KMH,
   SPEED_SLIDER_LOG_BASE,
   SPEED_SLIDER_MAX_EXPONENT,
-  MIN_SPEED_KMH,
-  MAX_SPEED_KMH,
 } from "@shared/constants";
 
 export function sliderToKmh(value: number): number {
-  const kmh = Math.pow(SPEED_SLIDER_LOG_BASE, value * SPEED_SLIDER_MAX_EXPONENT);
+  const kmh = SPEED_SLIDER_LOG_BASE ** (value * SPEED_SLIDER_MAX_EXPONENT);
   return Math.max(MIN_SPEED_KMH, Math.min(MAX_SPEED_KMH, kmh));
 }
 

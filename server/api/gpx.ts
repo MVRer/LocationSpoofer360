@@ -1,5 +1,5 @@
-import { post, json, error } from "./router.js";
 import { parseGpx } from "../gpx/parser.js";
+import { error, json, post } from "./router.js";
 
 post("/api/gpx/upload", async (req) => {
   try {
@@ -10,7 +10,7 @@ post("/api/gpx/upload", async (req) => {
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("file");
-      if (!file || !(file instanceof File)) {
+      if (!(file && file instanceof File)) {
         return error("No file uploaded");
       }
       xmlContent = await file.text();

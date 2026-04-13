@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { MapContainer, TileLayer, ZoomControl, LayersControl } from "react-leaflet";
+import { LayersControl, MapContainer, TileLayer, ZoomControl } from "react-leaflet";
+import { ClickHandler } from "./ClickHandler";
 import { LocationMarker } from "./LocationMarker";
 import { RouteOverlay } from "./RouteOverlay";
-import { ClickHandler } from "./ClickHandler";
 
 export function MapView() {
   return (
@@ -21,7 +20,7 @@ export function MapView() {
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Satellite">
           <TileLayer
-            attribution='&copy; Esri'
+            attribution="&copy; Esri"
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           />
         </LayersControl.BaseLayer>

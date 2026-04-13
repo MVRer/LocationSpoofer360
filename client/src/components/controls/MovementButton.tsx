@@ -1,6 +1,6 @@
-import { useRef, useCallback } from "react";
-import { useStore } from "../../store";
+import { useCallback, useRef } from "react";
 import { api } from "../../services/api";
+import { useStore } from "../../store";
 
 export function MovementButton() {
   const moveState = useStore((s) => s.moveState);
@@ -36,6 +36,7 @@ export function MovementButton() {
 
   return (
     <button
+      type="button"
       className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer transition-all border-2 ${
         isActive
           ? "bg-blue-500 border-blue-500 text-white"

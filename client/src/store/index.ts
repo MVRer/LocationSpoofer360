@@ -1,5 +1,5 @@
+import type { Coord, Device, MoveState, MoveType, RecentLocation } from "@shared/types";
 import { create } from "zustand";
-import type { Device, Coord, MoveType, MoveState, RecentLocation } from "@shared/types";
 
 interface AppState {
   // Devices
@@ -26,7 +26,7 @@ interface AppState {
   searchQuery: string;
   recentLocations: RecentLocation[];
   activeDialog: string | null;
-  dialogData: any;
+  dialogData: unknown;
   toasts: { id: number; message: string; type: "info" | "error" | "success" }[];
 
   // Settings
@@ -52,9 +52,12 @@ interface AppState {
   setAutoReverse: (enabled: boolean) => void;
   toggleSidebar: () => void;
   setSearchQuery: (query: string) => void;
+  setRecentLocations: (locs: RecentLocation[]) => void;
   addRecentLocation: (loc: RecentLocation) => void;
   clearRecentLocations: () => void;
-  openDialog: (name: string, data?: any) => void;
+  autoFocus: boolean;
+  toggleAutoFocus: () => void;
+  openDialog: (name: string, data?: unknown) => void;
   closeDialog: () => void;
   addToast: (message: string, type?: "info" | "error" | "success") => void;
   removeToast: (id: number) => void;
@@ -115,11 +118,17 @@ export const useStore = create<AppState>((set) => ({
   setAutoReverse: (enabled) => set({ autoReverse: enabled }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  autoFocus: true,
+  toggleAutoFocus: () => set((s) => ({ autoFocus: !s.autoFocus })),
+  setRecentLocations: (locs) => set({ recentLocations: locs }),
   addRecentLocation: (loc) =>
     set((s) => ({
-      recentLocations: [loc, ...s.recentLocations.filter(
-        (r) => r.coord.lat !== loc.coord.lat || r.coord.lng !== loc.coord.lng
-      )].slice(0, 10),
+      recentLocations: [
+        loc,
+        ...s.recentLocations.filter(
+          (r) => r.coord.lat !== loc.coord.lat || r.coord.lng !== loc.coord.lng,
+        ),
+      ].slice(0, 10),
     })),
   clearRecentLocations: () => set({ recentLocations: [] }),
   openDialog: (name, data) => set({ activeDialog: name, dialogData: data }),

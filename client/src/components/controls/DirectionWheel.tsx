@@ -1,6 +1,6 @@
-import { useRef, useCallback } from "react";
-import { useStore } from "../../store";
+import { useCallback, useRef } from "react";
 import { api } from "../../services/api";
+import { useStore } from "../../store";
 
 const DIRECTIONS = [
   { angle: 0, label: "N" },
@@ -27,27 +27,30 @@ export function DirectionWheel() {
     const cy = rect.top + rect.height / 2;
     const dx = e.clientX - cx;
     const dy = e.clientY - cy;
-    return ((Math.atan2(dx, -dy) * 180 / Math.PI) % 360 + 360) % 360;
+    return ((((Math.atan2(dx, -dy) * 180) / Math.PI) % 360) + 360) % 360;
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (moveState === "navigation") return;
-    dragging.current = true;
-    const angle = getAngleFromEvent(e);
-    api.setHeading(angle);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (moveState === "navigation") return;
+      dragging.current = true;
+      const angle = getAngleFromEvent(e);
+      api.setHeading(angle);
 
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      api.setHeading(getAngleFromEvent(ev));
-    };
-    const onUp = () => {
-      dragging.current = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [getAngleFromEvent, moveState]);
+      const onMove = (ev: MouseEvent) => {
+        if (!dragging.current) return;
+        api.setHeading(getAngleFromEvent(ev));
+      };
+      const onUp = () => {
+        dragging.current = false;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [getAngleFromEvent, moveState],
+  );
 
   const disabled = moveState === "navigation";
 
@@ -61,12 +64,19 @@ export function DirectionWheel() {
       className={`${disabled ? "opacity-40 pointer-events-none" : "opacity-80 hover:opacity-100 cursor-pointer"} transition-opacity`}
     >
       {/* Background ring */}
-      <circle cx="60" cy="60" r="55" fill="rgba(15,23,42,0.7)" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+      <circle
+        cx="60"
+        cy="60"
+        r="55"
+        fill="rgba(15,23,42,0.7)"
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="2"
+      />
       <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 
       {/* Direction labels */}
       {DIRECTIONS.map((d) => {
-        const rad = (d.angle - 90) * Math.PI / 180;
+        const rad = ((d.angle - 90) * Math.PI) / 180;
         const x = 60 + 48 * Math.cos(rad);
         const y = 60 + 48 * Math.sin(rad);
         return (

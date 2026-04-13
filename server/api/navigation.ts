@@ -1,7 +1,7 @@
-import { post, json, error } from "./router.js";
-import { startNavigation, stopNavigation, setAutoReverse, getAutoReverse } from "../simulation/navigation.js";
-import { startNavigationMode, stopMovement } from "../simulation/movement.js";
 import { simulateLocation } from "../simulation/location.js";
+import { startNavigationMode, stopMovement } from "../simulation/movement.js";
+import { getAutoReverse, setAutoReverse, startNavigation } from "../simulation/navigation.js";
+import { error, json, post } from "./router.js";
 
 post("/api/navigation/start", async (req) => {
   const { waypoints } = await req.json();

@@ -1,6 +1,6 @@
-import { useStore } from "../../store";
+import { formatSpeed, kmhToSlider, sliderToKmh } from "../../lib/speed";
 import { api } from "../../services/api";
-import { sliderToKmh, kmhToSlider, formatSpeed } from "../../lib/speed";
+import { useStore } from "../../store";
 
 export function SpeedSlider() {
   const speedKmh = useStore((s) => s.speedKmh);

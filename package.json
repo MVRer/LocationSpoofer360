@@ -8,7 +8,11 @@
     "dev:server": "bun --watch server/index.ts",
     "dev:client": "cd client && bunx --bun vite --port 3000",
     "build": "cd client && bunx --bun vite build",
-    "start": "bun server/index.ts"
+    "start": "bun server/index.ts",
+    "lint": "bunx biome check .",
+    "lint:fix": "bunx biome check --write .",
+    "format": "bunx biome format --write .",
+    "check": "bunx biome check --write --unsafe ."
   },
   "dependencies": {
     "fast-xml-parser": "^4.3.0"

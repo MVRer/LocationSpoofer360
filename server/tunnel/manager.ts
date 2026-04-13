@@ -1,6 +1,6 @@
+import { TUNNEL_CHECK_INTERVAL_MS, TUNNEL_CHECK_TIMEOUT_MS } from "../../shared/constants.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
 import { broadcast } from "../ws/handler.js";
-import { TUNNEL_CHECK_TIMEOUT_MS, TUNNEL_CHECK_INTERVAL_MS } from "../../shared/constants.js";
 
 let tunneldStartedByUs = false;
 
@@ -25,7 +25,10 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string }> 
 
   const pmd3 = await findPMD3Path();
   if (!pmd3) {
-    return { ok: false, message: "pymobiledevice3 not found. Install with: pip3 install pymobiledevice3" };
+    return {
+      ok: false,
+      message: "pymobiledevice3 not found. Install with: pip3 install pymobiledevice3",
+    };
   }
 
   const platform = process.platform;
@@ -58,14 +61,17 @@ export async function startTunneld(): Promise<{ ok: boolean; message: string }> 
       }
     }
 
-    return { ok: false, message: "Tunnel failed to start within timeout. Was the password dialog cancelled?" };
+    return {
+      ok: false,
+      message: "Tunnel failed to start within timeout. Was the password dialog cancelled?",
+    };
   } catch (err) {
     return { ok: false, message: `Failed to start tunnel: ${err}` };
   }
 }
 
 export async function stopTunneld(): Promise<{ ok: boolean; message: string }> {
-  if (!await isTunneldRunning()) {
+  if (!(await isTunneldRunning())) {
     broadcast({ type: "tunnel:status", running: false });
     return { ok: true, message: "Tunnel not running" };
   }
@@ -79,10 +85,9 @@ export async function stopTunneld(): Promise<{ ok: boolean; message: string }> {
       });
       await proc.exited;
     } else {
-      const proc = Bun.spawn(["sudo", "kill", "$(pgrep -f 'pymobiledevice3.*tunneld')"], {
+      const proc = Bun.spawn(["bash", "-c", "sudo kill $(pgrep -f 'pymobiledevice3.*tunneld')"], {
         stdout: "ignore",
         stderr: "ignore",
-        shell: true,
       });
       await proc.exited;
     }

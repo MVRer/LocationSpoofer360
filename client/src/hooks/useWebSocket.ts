@@ -1,16 +1,21 @@
-import { useEffect, useRef } from "react";
-import { useStore } from "../store";
 import type { ServerMessage } from "@shared/protocol";
+import { useEffect, useRef } from "react";
+import { api } from "../services/api";
+import { useStore } from "../store";
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
-  const store = useStore();
 
   useEffect(() => {
     function connect() {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
       wsRef.current = ws;
+
+      ws.onopen = () => {
+        // Re-fetch state on every connect/reconnect
+        refreshState();
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -28,6 +33,22 @@ export function useWebSocket() {
       ws.onerror = () => {
         ws.close();
       };
+    }
+
+    function refreshState() {
+      const s = useStore.getState();
+      api
+        .getDevices()
+        .then((devices) => s.setDevices(devices))
+        .catch(() => {});
+      api
+        .getTunnelStatus()
+        .then(({ running }) => s.setTunnelRunning(running))
+        .catch(() => {});
+      api
+        .getRecentLocations()
+        .then((locs) => s.setRecentLocations(locs))
+        .catch(() => {});
     }
 
     function handleMessage(msg: ServerMessage) {
@@ -79,7 +100,7 @@ export function useWebSocket() {
             s.setNavigationProgress(0);
             s.addToast("Navigation finished", "success");
           } else {
-            s.addToast("Route reversed, continuing navigation", "info");
+            s.addToast("Route reversed, continuing", "info");
           }
           break;
         case "distance:update":
@@ -92,7 +113,6 @@ export function useWebSocket() {
     }
 
     connect();
-
     return () => {
       wsRef.current?.close();
     };

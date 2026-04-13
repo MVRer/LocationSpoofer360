@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useStore } from "../../store";
+import { useEffect, useState } from "react";
 import { formatDistance } from "../../lib/geo";
 import { reverseGeocode } from "../../services/geocoding";
+import { useStore } from "../../store";
 
 export function StatusBar() {
   const currentLocation = useStore((s) => s.currentLocation);
@@ -25,7 +25,7 @@ export function StatusBar() {
       }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [currentLocation?.lat, currentLocation?.lng, moveState]);
+  }, [currentLocation?.lat, currentLocation?.lng, moveState, currentLocation]);
 
   return (
     <footer className="flex items-center justify-between px-3 py-1 bg-slate-900 border-t border-white/10 text-[11px] shrink-0 z-50">

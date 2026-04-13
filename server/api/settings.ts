@@ -1,9 +1,9 @@
-import { get, put, json } from "./router.js";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { DEFAULT_SPEEDS } from "../../shared/constants.js";
 import type { Settings } from "../../shared/types.js";
 import { config } from "../config.js";
-import { DEFAULT_SPEEDS } from "../../shared/constants.js";
+import { get, json, put } from "./router.js";
 
 const settingsFile = path.join(config.dataDir, "settings.json");
 

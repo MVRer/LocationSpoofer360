@@ -32,7 +32,9 @@ export function del(path: string, handler: Handler) {
   addRoute("DELETE", path, handler);
 }
 
-export function matchRoute(req: Request): { handler: Handler; params: Record<string, string> } | null {
+export function matchRoute(
+  req: Request,
+): { handler: Handler; params: Record<string, string> } | null {
   for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = route.pattern.exec(req.url);

@@ -1,5 +1,5 @@
-import { get, post, json } from "./router.js";
 import { isTunneldRunning, startTunneld, stopTunneld } from "../tunnel/manager.js";
+import { get, json, post } from "./router.js";
 
 get("/api/tunnel/status", async () => {
   const running = await isTunneldRunning();

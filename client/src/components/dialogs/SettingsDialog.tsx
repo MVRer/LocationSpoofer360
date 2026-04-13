@@ -1,5 +1,5 @@
-import { useStore } from "../../store";
 import { api } from "../../services/api";
+import { useStore } from "../../store";
 
 export function SettingsDialog() {
   const activeDialog = useStore((s) => s.activeDialog);
@@ -17,8 +17,14 @@ export function SettingsDialog() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]" onClick={closeDialog}>
-      <div className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[360px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]"
+      onClick={closeDialog}
+    >
+      <div
+        className="bg-slate-900 border border-white/10 rounded-lg p-5 min-w-[360px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-base font-semibold mb-4">Settings</h3>
 
         <div className="flex flex-col gap-4">
@@ -26,7 +32,9 @@ export function SettingsDialog() {
             <input
               type="checkbox"
               checked={confirmTeleport}
-              onChange={() => toggle("confirmTeleport", useStore.getState().setConfirmTeleport, confirmTeleport)}
+              onChange={() =>
+                toggle("confirmTeleport", useStore.getState().setConfirmTeleport, confirmTeleport)
+              }
               className="accent-blue-500"
             />
             Confirm teleportation
@@ -36,7 +44,9 @@ export function SettingsDialog() {
             <input
               type="checkbox"
               checked={speedVariance}
-              onChange={() => toggle("speedVariance", useStore.getState().setSpeedVariance, speedVariance)}
+              onChange={() =>
+                toggle("speedVariance", useStore.getState().setSpeedVariance, speedVariance)
+              }
               className="accent-blue-500"
             />
             Vary movement speed (80-120%)
@@ -57,7 +67,9 @@ export function SettingsDialog() {
                     }}
                     className="accent-blue-500"
                   />
-                  {b === "natural" ? "Natural (arrows move in that direction)" : "Traditional (left/right rotate heading)"}
+                  {b === "natural"
+                    ? "Natural (arrows move in that direction)"
+                    : "Traditional (left/right rotate heading)"}
                 </label>
               ))}
             </div>
@@ -66,6 +78,7 @@ export function SettingsDialog() {
 
         <div className="flex justify-end mt-5">
           <button
+            type="button"
             className="px-4 py-1.5 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer border border-blue-500"
             onClick={closeDialog}
           >

@@ -1,7 +1,7 @@
-import type { Device } from "../../shared/types.js";
 import { DEVICE_POLL_INTERVAL_MS } from "../../shared/constants.js";
-import { findPMD3Path, getPythonEnvPath } from "./pmd3.js";
+import type { Device } from "../../shared/types.js";
 import { broadcast } from "../ws/handler.js";
+import { findPMD3Path, getPythonEnvPath } from "./pmd3.js";
 
 let knownDevices: Device[] = [];
 
@@ -30,14 +30,27 @@ export async function refreshDevices(): Promise<Device[]> {
       return knownDevices;
     }
 
-    const parsed = JSON.parse(output);
-    const devices: Device[] = (Array.isArray(parsed) ? parsed : []).map((d: any) => ({
-      udid: d.Identifier ?? d.UniqueDeviceID ?? d.SerialNumber ?? "unknown",
-      name: d.DeviceName ?? d.ProductName ?? "iOS Device",
-      productType: d.ProductType ?? "unknown",
-      osVersion: d.ProductVersion ?? "unknown",
-      connectionType: d.ConnectionType === "Network" ? "network" as const : "usb" as const,
-    }));
+    interface PMD3DeviceEntry {
+      Identifier?: string;
+      UniqueDeviceID?: string;
+      SerialNumber?: string;
+      DeviceName?: string;
+      ProductName?: string;
+      ProductType?: string;
+      ProductVersion?: string;
+      ConnectionType?: string;
+    }
+
+    const parsed: unknown = JSON.parse(output);
+    const devices: Device[] = (Array.isArray(parsed) ? (parsed as PMD3DeviceEntry[]) : []).map(
+      (d) => ({
+        udid: d.Identifier ?? d.UniqueDeviceID ?? d.SerialNumber ?? "unknown",
+        name: d.DeviceName ?? d.ProductName ?? "iOS Device",
+        productType: d.ProductType ?? "unknown",
+        osVersion: d.ProductVersion ?? "unknown",
+        connectionType: d.ConnectionType === "Network" ? ("network" as const) : ("usb" as const),
+      }),
+    );
 
     // Diff and broadcast changes
     const oldUdids = new Set(knownDevices.map((d) => d.udid));

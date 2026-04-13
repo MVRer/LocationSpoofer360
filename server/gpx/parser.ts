@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import type { GpxData, GpxTrack, GpxRoute, Coord } from "../../shared/types.js";
+import type { Coord, GpxData, GpxRoute, GpxTrack } from "../../shared/types.js";
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -44,14 +44,19 @@ export function parseGpx(xmlContent: string): GpxData {
   return { name, tracks, routes, waypoints };
 }
 
-function ptToCoord(pt: any): Coord {
+interface GpxPoint {
+  "@_lat": string;
+  "@_lon": string;
+}
+
+function ptToCoord(pt: GpxPoint): Coord {
   return {
     lat: parseFloat(pt["@_lat"]),
     lng: parseFloat(pt["@_lon"]),
   };
 }
 
-function toArray(val: any): any[] {
+function toArray<T>(val: T | T[] | undefined | null): T[] {
   if (!val) return [];
   return Array.isArray(val) ? val : [val];
 }

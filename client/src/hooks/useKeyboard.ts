@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useStore } from "../store";
 import { api } from "../services/api";
+import { useStore } from "../store";
 
 export function useKeyboard() {
   const movementBehavior = useStore((s) => s.movementBehavior);
@@ -9,10 +9,7 @@ export function useKeyboard() {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Don't handle keys when typing in inputs
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
