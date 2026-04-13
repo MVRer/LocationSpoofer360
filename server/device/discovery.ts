@@ -18,7 +18,7 @@ export async function refreshDevices(): Promise<Device[]> {
   }
 
   try {
-    const proc = Bun.spawn([pmd3, "usbmux", "list", "--no-color", "-o", "json"], {
+    const proc = Bun.spawn([pmd3, "--no-color", "usbmux", "list"], {
       stdout: "pipe",
       stderr: "pipe",
       env: { ...process.env, PATH: getPythonEnvPath() },
@@ -28,6 +28,8 @@ export async function refreshDevices(): Promise<Device[]> {
     await proc.exited;
 
     if (proc.exitCode !== 0) {
+      const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
+      log.error(`usbmux list failed (exit ${proc.exitCode}): ${stderr.trim()}`);
       return knownDevices;
     }
 
@@ -59,12 +61,14 @@ export async function refreshDevices(): Promise<Device[]> {
 
     for (const device of devices) {
       if (!oldUdids.has(device.udid)) {
+        log.device(`Connected: ${device.name} (iOS ${device.osVersion}, ${device.connectionType})`);
         broadcast({ type: "device:connected", device });
       }
     }
 
     for (const device of knownDevices) {
       if (!newUdids.has(device.udid)) {
+        log.device(`Disconnected: ${device.name}`);
         broadcast({ type: "device:disconnected", udid: device.udid });
       }
     }
