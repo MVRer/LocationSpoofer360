@@ -18,6 +18,10 @@ export function broadcast(message: ServerMessage) {
   }
 }
 
+export function send(ws: ServerWebSocket<unknown>, message: ServerMessage) {
+  ws.send(JSON.stringify(message));
+}
+
 export function getClientCount(): number {
   return clients.size;
 }

@@ -1,6 +1,5 @@
 import type { ServerMessage } from "@shared/protocol";
 import { useEffect, useRef } from "react";
-import { api } from "../services/api";
 import { useStore } from "../store";
 
 export function useWebSocket() {
@@ -11,11 +10,6 @@ export function useWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
       wsRef.current = ws;
-
-      ws.onopen = () => {
-        // Re-fetch state on every connect/reconnect
-        refreshState();
-      };
 
       ws.onmessage = (event) => {
         try {
@@ -33,28 +27,6 @@ export function useWebSocket() {
       ws.onerror = () => {
         ws.close();
       };
-    }
-
-    function refreshState() {
-      const s = useStore.getState();
-      api
-        .getDevices()
-        .then((devices) => {
-          console.log("[ws] Fetched devices:", devices);
-          s.setDevices(devices);
-        })
-        .catch((err) => console.error("[ws] Failed to fetch devices:", err));
-      api
-        .getTunnelStatus()
-        .then(({ running }) => {
-          console.log("[ws] Tunnel status:", running);
-          s.setTunnelRunning(running);
-        })
-        .catch((err) => console.error("[ws] Failed to fetch tunnel status:", err));
-      api
-        .getRecentLocations()
-        .then((locs) => s.setRecentLocations(locs))
-        .catch((err) => console.error("[ws] Failed to fetch recent locations:", err));
     }
 
     function handleMessage(msg: ServerMessage) {

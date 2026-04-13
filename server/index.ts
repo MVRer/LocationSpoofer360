@@ -2,8 +2,12 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { json, matchRoute } from "./api/router.js";
 import { config } from "./config.js";
+import { getDevices } from "./device/discovery.js";
 import { log } from "./log.js";
-import { addClient, removeClient } from "./ws/handler.js";
+import { getCurrentHeading, getCurrentLocation } from "./simulation/location.js";
+import { getMoveState, getMoveType, getSpeedKmh, getTotalDistance } from "./simulation/movement.js";
+import { isTunneldRunning } from "./tunnel/manager.js";
+import { addClient, removeClient, send } from "./ws/handler.js";
 
 // Register API routes
 import "./api/devices.js";
@@ -89,9 +93,27 @@ const _server = Bun.serve({
     return json({ error: "Not found" }, 404);
   },
   websocket: {
-    open(ws) {
+    async open(ws) {
       addClient(ws);
       log.ws("Client connected");
+
+      // Push current state immediately so the client doesn't start empty
+      send(ws, { type: "device:list", devices: getDevices() });
+      send(ws, { type: "tunnel:status", running: await isTunneldRunning() });
+
+      const loc = getCurrentLocation();
+      if (loc) {
+        send(ws, {
+          type: "location:changed",
+          lat: loc.lat,
+          lng: loc.lng,
+          heading: getCurrentHeading(),
+        });
+        send(ws, { type: "moveState:changed", state: getMoveState() });
+        send(ws, { type: "moveType:changed", moveType: getMoveType() });
+        send(ws, { type: "speed:changed", kmh: getSpeedKmh() });
+        send(ws, { type: "distance:update", totalMeters: getTotalDistance() });
+      }
     },
     close(ws) {
       removeClient(ws);
