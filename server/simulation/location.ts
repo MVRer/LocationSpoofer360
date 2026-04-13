@@ -2,7 +2,7 @@ import type { Coord } from "../../shared/types.js";
 import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
 import { log } from "../log.js";
 import { broadcast } from "../sse/emitter.js";
-import { fireAndForget, run } from "../util/proc.js";
+import { run, spawnExclusive } from "../util/proc.js";
 
 let selectedUdid: string | null = null;
 let currentLocation: Coord | null = null;
@@ -40,14 +40,15 @@ export function updateLocation(coord: Coord) {
 
 /**
  * Send the location to the iOS device via pymobiledevice3.
- * Fire-and-forget.
+ * Kills the previous process before spawning a new one — only one alive at a time.
  */
 function sendToDevice(coord: Coord) {
   if (!selectedUdid) return;
 
   findPMD3Path().then((pmd3) => {
     if (!pmd3) return;
-    fireAndForget(
+    spawnExclusive(
+      "simulate-location",
       [
         pmd3,
         "developer", "dvt", "simulate-location", "set",

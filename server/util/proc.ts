@@ -1,4 +1,4 @@
-import { spawn as nodeSpawn } from "node:child_process";
+import { spawn as nodeSpawn, type ChildProcess } from "node:child_process";
 
 interface SpawnOptions {
   stdout?: "pipe" | "ignore";
@@ -68,6 +68,47 @@ export function fireAndForget(
       env: options.env as NodeJS.ProcessEnv,
     });
     proc.unref();
+  } catch {
+    // ignore spawn errors
+  }
+}
+
+/**
+ * Spawn a process, killing any previous one from the same slot.
+ * Only one process per slot is alive at a time.
+ */
+const activeProcs = new Map<string, ChildProcess>();
+
+export function spawnExclusive(
+  slot: string,
+  cmd: string[],
+  options: SpawnOptions = {},
+) {
+  // Kill the previous process in this slot
+  const prev = activeProcs.get(slot);
+  if (prev && prev.exitCode === null) {
+    try {
+      prev.kill("SIGTERM");
+    } catch {
+      // already dead
+    }
+  }
+
+  try {
+    const proc = nodeSpawn(cmd[0], cmd.slice(1), {
+      stdio: ["ignore", "ignore", "ignore"],
+      env: options.env as NodeJS.ProcessEnv,
+    });
+    activeProcs.set(slot, proc);
+    proc.on("close", () => {
+      // Only clear if this is still the active proc for this slot
+      if (activeProcs.get(slot) === proc) {
+        activeProcs.delete(slot);
+      }
+    });
+    proc.on("error", () => {
+      activeProcs.delete(slot);
+    });
   } catch {
     // ignore spawn errors
   }
