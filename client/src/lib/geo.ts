@@ -20,3 +20,14 @@ export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(2)} km`;
 }
+
+/** Normalize Leaflet coordinates to valid GPS range. Leaflet returns
+ *  unwrapped longitudes (e.g. -459 instead of -99) when the map is panned. */
+export function normalizeCoord(lat: number, lng: number): { lat: number; lng: number } {
+  let normalizedLng = ((lng + 180) % 360) - 180;
+  if (normalizedLng < -180) normalizedLng += 360;
+  return {
+    lat: Math.max(-90, Math.min(90, lat)),
+    lng: normalizedLng,
+  };
+}

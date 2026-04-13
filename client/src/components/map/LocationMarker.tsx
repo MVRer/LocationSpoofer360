@@ -1,6 +1,7 @@
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
 import { Marker, useMap } from "react-leaflet";
+import { normalizeCoord } from "../../lib/geo";
 import { useStore } from "../../store";
 
 export function LocationMarker() {
@@ -41,7 +42,8 @@ export function LocationMarker() {
     const marker = markerRef.current;
     if (marker) {
       const pos = marker.getLatLng();
-      useStore.getState().openDialog("teleport", { lat: pos.lat, lng: pos.lng });
+      const coord = normalizeCoord(pos.lat, pos.lng);
+      useStore.getState().openDialog("teleport", coord);
     }
   };
 

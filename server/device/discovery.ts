@@ -44,7 +44,20 @@ export async function refreshDevices(): Promise<Device[]> {
       ConnectionType?: string;
     }
 
-    const parsed: unknown = JSON.parse(output);
+    const trimmed = output.trim();
+    if (!trimmed || trimmed === "[]") {
+      // No devices connected -- not an error
+      if (knownDevices.length > 0) {
+        for (const device of knownDevices) {
+          log.device(`Disconnected: ${device.name}`);
+          broadcast({ type: "device:disconnected", udid: device.udid });
+        }
+        knownDevices = [];
+      }
+      return [];
+    }
+
+    const parsed: unknown = JSON.parse(trimmed);
     const devices: Device[] = (Array.isArray(parsed) ? (parsed as PMD3DeviceEntry[]) : []).map(
       (d) => ({
         udid: d.Identifier ?? d.UniqueDeviceID ?? d.SerialNumber ?? "unknown",
