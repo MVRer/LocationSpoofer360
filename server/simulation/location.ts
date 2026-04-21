@@ -1,8 +1,7 @@
 import type { Coord } from "../../shared/types.js";
-import { findPMD3Path, getPythonEnvPath } from "../device/pmd3.js";
 import { log } from "../log.js";
 import { broadcast } from "../sse/emitter.js";
-import { run, spawnExclusive } from "../util/proc.js";
+import { clearLocation, sendLocation, shutdownDaemon } from "./deviceBridge.js";
 
 let selectedUdid: string | null = null;
 let currentLocation: Coord | null = null;
@@ -13,6 +12,10 @@ export function getSelectedUdid(): string | null {
 }
 
 export function setSelectedUdid(udid: string | null) {
+  if (selectedUdid !== udid) {
+    // Shutdown previous daemon — new udid will spawn a fresh one on next send
+    shutdownDaemon();
+  }
   selectedUdid = udid;
 }
 
@@ -39,25 +42,12 @@ export function updateLocation(coord: Coord) {
 }
 
 /**
- * Send the location to the iOS device via pymobiledevice3.
- * Kills the previous process before spawning a new one — only one alive at a time.
+ * Send the location to the iOS device via the persistent Python daemon.
+ * Non-blocking — just writes to the daemon's stdin.
  */
 function sendToDevice(coord: Coord) {
   if (!selectedUdid) return;
-
-  findPMD3Path().then((pmd3) => {
-    if (!pmd3) return;
-    spawnExclusive(
-      "simulate-location",
-      [
-        pmd3,
-        "developer", "dvt", "simulate-location", "set",
-        "--tunnel", selectedUdid!,
-        "--", String(coord.lat), String(coord.lng),
-      ],
-      { env: { ...process.env, PATH: getPythonEnvPath() } },
-    );
-  });
+  sendLocation(selectedUdid, coord.lat, coord.lng);
 }
 
 export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; message: string }> {
@@ -69,15 +59,7 @@ export async function simulateLocation(coord: Coord): Promise<{ ok: boolean; mes
 export async function resetLocation(): Promise<{ ok: boolean; message: string }> {
   log.sim("Reset location");
   if (selectedUdid) {
-    const pmd3 = await findPMD3Path();
-    if (pmd3) {
-      try {
-        await run(
-          [pmd3, "developer", "dvt", "simulate-location", "clear", "--tunnel", selectedUdid],
-          { env: { ...process.env, PATH: getPythonEnvPath() } },
-        );
-      } catch { /* best effort */ }
-    }
+    await clearLocation(selectedUdid);
   }
 
   currentLocation = null;
@@ -89,4 +71,6 @@ export function isSimulating(): boolean {
   return currentLocation !== null;
 }
 
-export function cleanup() {}
+export function cleanup() {
+  shutdownDaemon();
+}

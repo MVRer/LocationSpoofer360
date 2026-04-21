@@ -74,41 +74,68 @@ export function fireAndForget(
 }
 
 /**
- * Spawn a process only if the previous one in the same slot has finished.
- * Skips the spawn if one is still running — avoids zombie pile-up
- * without killing mid-execution (which could cause position glitches).
+ * Capped fire-and-forget pool. Spawns freely for smooth movement,
+ * but caps at MAX_POOL processes. Old ones auto-remove on exit.
+ * Call flushPool() when navigation finishes to kill all but the last one.
  */
-const activeProcs = new Map<string, ChildProcess>();
+const MAX_POOL = 15;
+const pools = new Map<string, ChildProcess[]>();
 
-export function spawnExclusive(
+export function spawnCapped(
   slot: string,
   cmd: string[],
   options: SpawnOptions = {},
 ) {
-  // If the previous process is still running, skip this spawn
-  const prev = activeProcs.get(slot);
-  if (prev && prev.exitCode === null) {
-    return;
+  let pool = pools.get(slot);
+  if (!pool) {
+    pool = [];
+    pools.set(slot, pool);
   }
+
+  // Prune finished processes
+  const alive = pool.filter((p) => p.exitCode === null);
+
+  // At cap — kill the oldest to make room
+  while (alive.length >= MAX_POOL) {
+    const oldest = alive.shift();
+    if (oldest && oldest.exitCode === null) {
+      try { oldest.kill("SIGTERM"); } catch {}
+    }
+  }
+
+  pools.set(slot, alive);
 
   try {
     const proc = nodeSpawn(cmd[0], cmd.slice(1), {
       stdio: ["ignore", "ignore", "ignore"],
       env: options.env as NodeJS.ProcessEnv,
     });
-    activeProcs.set(slot, proc);
-    proc.on("close", () => {
-      // Only clear if this is still the active proc for this slot
-      if (activeProcs.get(slot) === proc) {
-        activeProcs.delete(slot);
-      }
-    });
-    proc.on("error", () => {
-      activeProcs.delete(slot);
-    });
+    alive.push(proc);
   } catch {
     // ignore spawn errors
   }
+}
+
+/**
+ * Kill all processes in a slot except the most recently spawned one.
+ * Call this when navigation finishes or location is reset.
+ */
+export function flushPool(slot: string) {
+  const pool = pools.get(slot);
+  if (!pool || pool.length === 0) return;
+
+  // Keep only the last one, kill the rest
+  const last = pool[pool.length - 1];
+  for (const proc of pool) {
+    if (proc !== last && proc.exitCode === null) {
+      try {
+        proc.kill("SIGTERM");
+      } catch {
+        // already dead
+      }
+    }
+  }
+  pools.set(slot, last.exitCode === null ? [last] : []);
 }
 
 /**
