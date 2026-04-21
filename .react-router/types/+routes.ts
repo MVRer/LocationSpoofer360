@@ -73,6 +73,11 @@ type Pages = {
       "udid": string;
     };
   };
+  "/api/devices/:udid/wifi": {
+    params: {
+      "udid": string;
+    };
+  };
   "/api/events": {
     params: {};
   };
@@ -81,7 +86,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/navigation/reverse" | "/api/movement/variance" | "/api/movement/heading" | "/api/navigation/start" | "/api/recent-locations" | "/api/navigation/stop" | "/api/location/reset" | "/api/movement/speed" | "/api/movement/mode" | "/api/movement/step" | "/api/movement/type" | "/api/tunnel/status" | "/api/location/set" | "/api/tunnel/start" | "/api/tunnel/stop" | "/api/gpx/upload" | "/api/settings" | "/api/devices" | "/api/devices/:udid/select" | "/api/events";
+    page: "/" | "/api/navigation/reverse" | "/api/movement/variance" | "/api/movement/heading" | "/api/navigation/start" | "/api/recent-locations" | "/api/navigation/stop" | "/api/location/reset" | "/api/movement/speed" | "/api/movement/mode" | "/api/movement/step" | "/api/movement/type" | "/api/tunnel/status" | "/api/location/set" | "/api/tunnel/start" | "/api/tunnel/stop" | "/api/gpx/upload" | "/api/settings" | "/api/devices" | "/api/devices/:udid/select" | "/api/devices/:udid/wifi" | "/api/events";
   };
   "routes/api.navigation.reverse.ts": {
     id: "routes/api.navigation.reverse";
@@ -153,11 +158,15 @@ type RouteFiles = {
   };
   "routes/api.devices.ts": {
     id: "routes/api.devices";
-    page: "/api/devices" | "/api/devices/:udid/select";
+    page: "/api/devices" | "/api/devices/:udid/select" | "/api/devices/:udid/wifi";
   };
   "routes/api.devices.$udid.select.ts": {
     id: "routes/api.devices.$udid.select";
     page: "/api/devices/:udid/select";
+  };
+  "routes/api.devices.$udid.wifi.ts": {
+    id: "routes/api.devices.$udid.wifi";
+    page: "/api/devices/:udid/wifi";
   };
   "routes/api.events.ts": {
     id: "routes/api.events";
@@ -190,6 +199,7 @@ type RouteModules = {
   "routes/api.settings": typeof import("./app/routes/api.settings.ts");
   "routes/api.devices": typeof import("./app/routes/api.devices.ts");
   "routes/api.devices.$udid.select": typeof import("./app/routes/api.devices.$udid.select.ts");
+  "routes/api.devices.$udid.wifi": typeof import("./app/routes/api.devices.$udid.wifi.ts");
   "routes/api.events": typeof import("./app/routes/api.events.ts");
   "routes/_index": typeof import("./app/routes/_index.tsx");
 };

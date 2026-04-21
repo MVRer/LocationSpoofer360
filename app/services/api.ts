@@ -24,6 +24,11 @@ export const api = {
   getDevices: () => request<Device[]>("GET", "/api/devices"),
   selectDevice: (udid: string) => request<OkResponse>("POST", `/api/devices/${udid}/select`),
 
+  getDeviceWifi: (udid: string) =>
+    request<{ state: "on" | "off" | "unknown" }>("GET", `/api/devices/${udid}/wifi`),
+  setDeviceWifi: (udid: string, state: "on" | "off") =>
+    request<OkResponse>("POST", `/api/devices/${udid}/wifi`, { state }),
+
   getTunnelStatus: () => request<{ running: boolean }>("GET", "/api/tunnel/status"),
   startTunnel: () => request<TunnelResponse>("POST", "/api/tunnel/start"),
   stopTunnel: () => request<TunnelResponse>("POST", "/api/tunnel/stop"),

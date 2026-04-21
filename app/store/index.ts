@@ -6,6 +6,7 @@ interface AppState {
   devices: Device[];
   selectedUdid: string | null;
   tunnelRunning: boolean;
+  wifiState: Record<string, "on" | "off" | "unknown">;
 
   // Location
   currentLocation: Coord | null;
@@ -43,6 +44,7 @@ interface AppState {
   removeDevice: (udid: string) => void;
   setSelectedUdid: (udid: string | null) => void;
   setTunnelRunning: (running: boolean) => void;
+  setWifiState: (udid: string, state: "on" | "off" | "unknown") => void;
   setCurrentLocation: (coord: Coord | null) => void;
   setHeading: (heading: number) => void;
   setMoveState: (state: MoveState) => void;
@@ -79,6 +81,7 @@ export const useStore = create<AppState>((set) => ({
   devices: [],
   selectedUdid: null,
   tunnelRunning: false,
+  wifiState: {},
   currentLocation: null,
   heading: 0,
   moveState: "idle",
@@ -115,6 +118,8 @@ export const useStore = create<AppState>((set) => ({
     })),
   setSelectedUdid: (udid) => set({ selectedUdid: udid }),
   setTunnelRunning: (running) => set({ tunnelRunning: running }),
+  setWifiState: (udid, state) =>
+    set((s) => ({ wifiState: { ...s.wifiState, [udid]: state } })),
   setCurrentLocation: (coord) => set({ currentLocation: coord }),
   setHeading: (heading) => set({ heading }),
   setMoveState: (state) => set({ moveState: state }),

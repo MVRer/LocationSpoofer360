@@ -5,6 +5,7 @@ import {
   SignalIcon,
   WifiIcon,
 } from "@heroicons/react/24/outline";
+import { WifiIcon as WifiIconSolid } from "@heroicons/react/24/solid";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
 import { type SearchResult, searchLocation } from "../../services/geocoding";
@@ -16,11 +17,13 @@ export function Sidebar() {
   const tunnelRunning = useStore((s) => s.tunnelRunning);
   const recentLocations = useStore((s) => s.recentLocations);
   const addToast = useStore((s) => s.addToast);
+  const wifiState = useStore((s) => s.wifiState);
 
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [tunnelLoading, setTunnelLoading] = useState(false);
+  const [wifiBusy, setWifiBusy] = useState<Record<string, boolean>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Poll devices and tunnel status directly via REST
@@ -33,6 +36,18 @@ export function Sidebar() {
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
   }, []);
+
+  // Fetch wifi-connections state for each device whenever the device list changes.
+  useEffect(() => {
+    const setWifi = useStore.getState().setWifiState;
+    for (const d of devices) {
+      if (wifiState[d.udid] !== undefined) continue;
+      api
+        .getDeviceWifi(d.udid)
+        .then((res) => setWifi(d.udid, res.state))
+        .catch(() => setWifi(d.udid, "unknown"));
+    }
+  }, [devices, wifiState]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -69,6 +84,31 @@ export function Sidebar() {
       useStore.getState().setSelectedUdid(udid);
     } catch {
       addToast("Failed to select device", "error");
+    }
+  };
+
+  const handleToggleWifi = async (udid: string, currentState: "on" | "off" | "unknown") => {
+    const next: "on" | "off" = currentState === "on" ? "off" : "on";
+    setWifiBusy((b) => ({ ...b, [udid]: true }));
+    try {
+      const res = await api.setDeviceWifi(udid, next);
+      if (res.ok) {
+        useStore.getState().setWifiState(udid, next);
+        if (next === "on") {
+          addToast(
+            "WiFi mode enabled — device is now reachable over your LAN. Disable when you're done.",
+            "success",
+          );
+        } else {
+          addToast("WiFi mode disabled — device only reachable via USB", "success");
+        }
+      } else {
+        addToast(res.message || "Failed to toggle WiFi mode", "error");
+      }
+    } catch {
+      addToast("Failed to toggle WiFi mode", "error");
+    } finally {
+      setWifiBusy((b) => ({ ...b, [udid]: false }));
     }
   };
 
@@ -156,40 +196,94 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Devices */}
-      <div className="p-3 border-b border-white/10">
-        <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-          <DevicePhoneMobileIcon className="w-3.5 h-3.5" />
-          Devices
-        </h3>
-        {devices.length === 0 ? (
-          <p className="text-xs text-slate-600">No devices found</p>
-        ) : (
-          <ul className="list-none space-y-1">
-            {devices.map((d) => (
-              <li
-                key={d.udid}
-                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-                  d.udid === selectedUdid
-                    ? "bg-blue-500/20 outline outline-1 outline-blue-500"
-                    : "hover:bg-slate-800"
+      {/* Devices — split into USB and LAN sections */}
+      {(() => {
+        const usbDevices = devices.filter((d) => d.connectionType === "usb");
+        const lanDevices = devices.filter((d) => d.connectionType === "network");
+
+        const renderRow = (d: typeof devices[number]) => {
+          const wifi = wifiState[d.udid] ?? "unknown";
+          const busy = wifiBusy[d.udid] === true;
+          const wifiOn = wifi === "on";
+          return (
+            <li
+              key={d.udid}
+              className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                d.udid === selectedUdid
+                  ? "bg-blue-500/20 outline outline-1 outline-blue-500"
+                  : "hover:bg-slate-800"
+              }`}
+              onClick={() => handleSelectDevice(d.udid)}
+            >
+              {d.connectionType === "usb" ? (
+                <DevicePhoneMobileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <WifiIcon className="w-4 h-4 text-green-400 shrink-0" />
+              )}
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="font-medium truncate text-sm">{d.name}</span>
+                <span className="text-[11px] text-slate-500">iOS {d.osVersion}</span>
+              </div>
+              <button
+                type="button"
+                title={
+                  wifiOn
+                    ? "WiFi mode ON — device reachable over LAN. Click to disable."
+                    : "Enable WiFi mode so this device stays reachable after USB unplug. Requires same WiFi network as this Mac."
+                }
+                disabled={busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleWifi(d.udid, wifi);
+                }}
+                className={`shrink-0 p-1 rounded transition-colors disabled:opacity-50 cursor-pointer ${
+                  wifiOn
+                    ? "text-green-400 hover:text-green-300 bg-green-400/10"
+                    : "text-slate-500 hover:text-slate-300 hover:bg-slate-700"
                 }`}
-                onClick={() => handleSelectDevice(d.udid)}
               >
-                {d.connectionType === "usb" ? (
-                  <DevicePhoneMobileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                {wifiOn ? (
+                  <WifiIconSolid className="w-4 h-4" />
                 ) : (
-                  <WifiIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                  <WifiIcon className="w-4 h-4" />
                 )}
-                <div className="flex flex-col min-w-0">
-                  <span className="font-medium truncate text-sm">{d.name}</span>
-                  <span className="text-[11px] text-slate-500">iOS {d.osVersion}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              </button>
+            </li>
+          );
+        };
+
+        return (
+          <>
+            <div className="p-3 border-b border-white/10">
+              <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                <DevicePhoneMobileIcon className="w-3.5 h-3.5" />
+                USB Devices
+              </h3>
+              {usbDevices.length === 0 ? (
+                <p className="text-xs text-slate-600">No USB devices</p>
+              ) : (
+                <ul className="list-none space-y-1">{usbDevices.map(renderRow)}</ul>
+              )}
+            </div>
+
+            <div className="p-3 border-b border-white/10">
+              <h3 className="text-[11px] uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                <WifiIcon className="w-3.5 h-3.5" />
+                On LAN
+              </h3>
+              {lanDevices.length === 0 ? (
+                <p className="text-xs text-slate-600">
+                  {tunnelRunning
+                    ? "No devices on WiFi. Toggle a USB device's WiFi icon, then unplug to test."
+                    : "Start the tunnel to discover WiFi devices."}
+                </p>
+              ) : (
+                <ul className="list-none space-y-1">{lanDevices.map(renderRow)}</ul>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {/* Recent Locations */}
       {recentLocations.length > 0 && (

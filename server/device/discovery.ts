@@ -4,6 +4,7 @@ import { log } from "../log.js";
 import { broadcast } from "../sse/emitter.js";
 import { run } from "../util/proc.js";
 import { findPMD3Path, getPythonEnvPath } from "./pmd3.js";
+import { getTunneldDevices } from "./tunneldClient.js";
 
 let knownDevices: Device[] = [];
 
@@ -54,7 +55,7 @@ export async function refreshDevices(): Promise<Device[]> {
     }
 
     const parsed: unknown = JSON.parse(trimmed);
-    const devices: Device[] = (Array.isArray(parsed) ? (parsed as PMD3DeviceEntry[]) : []).map(
+    const usbDevices: Device[] = (Array.isArray(parsed) ? (parsed as PMD3DeviceEntry[]) : []).map(
       (d) => ({
         udid: d.Identifier ?? d.UniqueDeviceID ?? d.SerialNumber ?? "unknown",
         name: d.DeviceName ?? d.ProductName ?? "iOS Device",
@@ -63,6 +64,28 @@ export async function refreshDevices(): Promise<Device[]> {
         connectionType: d.ConnectionType === "Network" ? ("network" as const) : ("usb" as const),
       }),
     );
+
+    // Merge in WiFi-only devices visible to tunneld but not on usbmux.
+    // Reuse last-known name/version from previously-seen devices.
+    const usbUdids = new Set(usbDevices.map((d) => d.udid));
+    const tunneld = await getTunneldDevices();
+    const seenWifi = new Set<string>();
+    const wifiDevices: Device[] = [];
+    for (const entry of tunneld) {
+      if (entry.transport !== "network") continue;
+      if (usbUdids.has(entry.udid)) continue;
+      if (seenWifi.has(entry.udid)) continue;
+      seenWifi.add(entry.udid);
+      const last = knownDevices.find((d) => d.udid === entry.udid);
+      wifiDevices.push({
+        udid: entry.udid,
+        name: last?.name ?? "iOS Device",
+        productType: last?.productType ?? "unknown",
+        osVersion: last?.osVersion ?? "unknown",
+        connectionType: "network",
+      });
+    }
+    const devices: Device[] = [...usbDevices, ...wifiDevices];
 
     // Diff and broadcast changes
     const oldUdids = new Set(knownDevices.map((d) => d.udid));
